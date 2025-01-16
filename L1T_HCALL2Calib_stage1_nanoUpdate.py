@@ -1975,7 +1975,7 @@ def run():
                 print(f"Jet_br: {Jet_br}"); sys.stdout.flush()
                 print(f"{Jet_br.puppi_nJets = }"); sys.stdout.flush()
             
-            nOffJets  = int(Jet_br.puppi_nJets) if offlinePUPPIJet elif usingL1Nano int(Jet_br.nJets) else int(Jet_br.nJets)
+            nOffJets  = int(Jet_br.puppi_nJets) if offlinePUPPIJet else int(Jet_br.nJets)
             nOffMuons = int(Muon_br.nMuons)
             nOffEles  = int(Ele_br.nElectrons)
             nUnpJets  = int(Unp_br.nJets)
@@ -2386,8 +2386,7 @@ def run():
                                 ##isForwardJet          and Jet_br.nhef[iOff]  <= 0.20, # neutralHadronEnergyFraction()
                                 isForwardJet          and Jet_br.neEmEF[iOff] >= 0.40, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
                                 isForwardJet          and Jet_br.neMultiplicity[iOff] <= 10 , # jet_data->nMult.push_back(it->neutralMultiplicity());
-                            ]is
-
+                            ]
                         else:
                             reject_if = [
                                 isCentralJet          and Jet_br.nhef[iOff]  >= 0.99, # neutralHadronEnergyFraction()
