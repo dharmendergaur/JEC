@@ -61,11 +61,7 @@ class Evt_br:
         for full_name, array in branches.items():
             setattr(self, full_name, array)
 
-class Vtx_br:
-    def __init__(self, branches):
-        for full_name, array in branches.items():
-            attr_name = full_name.split("unpacked_")[1]  # Get the part after "unpacked_"
-            setattr(self, attr_name, array)
+
 
 
 
@@ -94,14 +90,7 @@ class Vtx_br:
 # print(muon_br.nMuons) 
 
 # Issue: no medium selection found in Nano
-# class Ele_br:
-#     def __init__(self, branches):
-#         for full_name, array in branches.items():
-#             if full_name == "nElectron":
-#                 self.nElectrons = int(array[0])  # Assign as scalar
-#             else:
-#                 attr_name = full_name.split("Electron_")[1]  # Get the part after "Muon_"
-#                 setattr(self, attr_name, array)
+
 
 class Unp_br:
     def __init__(self, branches):
@@ -563,6 +552,7 @@ def passGoldenJSON(goldenJSON, run, lumisection):
     
                         
 def run():
+    # Extract branches dynamically, defining the class
     class muon_br:
         def __init__(self, branches):
             for full_name, array in branches.items():
@@ -570,6 +560,15 @@ def run():
                     self.nMuons = int(array[0])  # Assign scalar for nMuon
                 else:
                     attr_name = full_name.split("Muon_")[1]  # Extract name after "Muon_"
+                    setattr(self, attr_name, array)
+
+    class ele_br:
+        def __init__(self, branches):
+            for full_name, array in branches.items():
+                if full_name == "nElectron":
+                    self.nElectrons = int(array[0])  # Assign as scalar
+                else:
+                    attr_name = full_name.split("Electron_")[1]  # Get the part after "Muon_"
                     setattr(self, attr_name, array)
 
     class uTT_br:
@@ -599,6 +598,7 @@ def run():
                     attr_name = full_name.split("L1EmulCaloCluster_")[1]  # Extract name after "Muon_"
                     setattr(self, attr_name, array)
 
+
     class jet_br:
         def __init__(self, branches):
             for full_name, array in branches.items():
@@ -606,6 +606,31 @@ def run():
                     self.nJets = int(array[0])  # Assign scalar for nMuon
                 else:
                     attr_name = full_name.split("Jet_")[1]  # Extract name after "Muon_"
+                    setattr(self, attr_name, array)
+
+    class evt_br:
+        def __init__(self, branches):
+            # Map branch names to class attributes
+            branch_map = {
+                "event": "event",
+                "run": "run",
+                "luminosityBlock": "lumi"
+            }
+            
+            # Loop through the expected branches and set attributes
+            for branch_name, attr_name in branch_map.items():
+                if branch_name in branches:
+                    setattr(self, attr_name, int(branches[branch_name][0]))
+                else:
+                    setattr(self, attr_name, None) 
+
+    class vtx_br:
+        def __init__(self, branches):
+            for full_name, array in branches.items():
+                if full_name == "nOtherPV":
+                    self.nVtx = int(array[0])  # Assign scalar for nMuon
+                else:
+                    attr_name = full_name.split("PV_")[1]  # Extract name after "Muon_"
                     setattr(self, attr_name, array)
 
     # class l1jet_br:
@@ -632,6 +657,7 @@ def run():
         tree = file["Events"]
         
         # Extract the relevant branches (those starting with "Muon_" or "nMuon")
+        electron_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("Electron_") or name == "nElectron"}
         muon_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("Muon_") or name == "nMuon"}
         uTT_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("L1UnpackedCaloTower_") or name == "nL1UnpackedCaloTower"}
         eTT_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("L1EmulCaloTower_") or name == "nL1EmulCaloTower"}
@@ -639,14 +665,20 @@ def run():
         jet_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("Jet_") or name == "nJet"}
         # l1jet_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("L1Jet_") or name == "nL1Jet"}
         emul_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("L1EmulJet_") or name == "nL1EmulJet"}
+        vertex_branches = {name: tree[name].array() for name in tree.keys() if name.startswith("PV_") or name == "nOtherPV"}
+        event_branches = {name: tree[name].array() for name in tree.keys() if name=="event" or name=="run" or name=="luminosityBlock"}
+        
 
     Muon_br = muon_br(muon_branches)
+    Ele_br = ele_br(electron_branches)
     uTT_br = uTT_br(uTT_branches)
     eTT_br = eTT_br(eTT_branches)
     eTC_br = eTC_br(eTC_branches)
     Jet_br = jet_br(jet_branches)
     # lJet_br = l1jet_br(jet_branches)
     Emu_br = emu_br(emul_branches)
+    Vtx_br = vtx_br(vertex_branches)
+    Evt_br = evt_br(event_branches)
 
     '''
     print("Print sys.path: {}".format(sys.path))
@@ -1780,7 +1812,7 @@ def run():
     for iMu in range(nOffMuons):
         print(f"  {iMu}: charge {Muon_br.charge[iMu]},pt {Muon_br.pt[iMu]}, eta {Muon_br.eta[iMu]}, phi {Muon_br.phi[iMu]}, isLooseMuon {Muon_br.looseId[iMu]}, isMediumMuon {Muon_br.mediumId[iMu]}, isTightMuon {Muon_br.tightId[iMu]}" )
            
-    for iCh in range(Muon_br.nMuons):
+    for iCh in range(Jet_br.nJets):
     # for iCh in range(len(Muon_br.pt)):
     # for iCh in range(len(chains['Unp'])):
         if PrintLevel > 0: print("iCh: {}".format(iCh)); sys.stdout.flush();
@@ -1789,17 +1821,17 @@ def run():
         #print("Evt_br here1"); sys.stdout.flush();
 
         ## Faster tecnhique, inspired by https://github.com/thomreis/l1tMuonTools/blob/master/L1Analysis.py
-        Evt_br = R.L1Analysis.L1AnalysisEventDataFormat()
-        Vtx_br = R.L1Analysis.L1AnalysisRecoVertexDataFormat()
+        # Evt_br = R.L1Analysis.L1AnalysisEventDataFormat()
+        # Vtx_br = R.L1Analysis.L1AnalysisRecoVertexDataFormat()
         # Jet_br = R.L1Analysis.L1AnalysisRecoJetDataFormat()
         # Muon_br = R.L1Analysis.L1AnalysisRecoMuon2DataFormat()
-        Ele_br = R.L1Analysis.L1AnalysisRecoElectronDataFormat()        
+        # Ele_br = R.L1Analysis.L1AnalysisRecoElectronDataFormat()        
         Unp_br = R.L1Analysis.L1AnalysisL1UpgradeDataFormat()
         # Emu_br = R.L1Analysis.L1AnalysisL1UpgradeDataFormat()
         uTP_br = R.L1Analysis.L1AnalysisCaloTPDataFormat()
         eTP_br = R.L1Analysis.L1AnalysisCaloTPDataFormat()
         # uTT_br = R.L1Analysis.L1AnalysisL1CaloTowerDataFormat()
-        eTT_br = R.L1Analysis.L1AnalysisL1CaloTowerDataFormat()
+        #  = R.L1Analysis.L1AnalysisL1CaloTowerDataFormat()
         uTC_br = R.L1Analysis.L1AnalysisL1CaloClusterDataFormat()
         # eTC_br = R.L1Analysis.L1AnalysisL1CaloClusterDataFormat()
         Gen_br = R.L1Analysis.L1AnalysisGeneratorDataFormat() 
@@ -1810,11 +1842,11 @@ def run():
         presentTree_l1EleRecoTree = True
         presentTree_l1GeneratorTree = True
         
-        chains['Evt'][iCh].SetBranchAddress('Event',     R.AddressOf(Evt_br))
-        try:
-            chains['Vtx'][iCh].SetBranchAddress('Vertex',    R.AddressOf(Vtx_br))
-        except:
-            presentTree_l1RecoTree = False
+        # chains['Evt'][iCh].SetBranchAddress('Event',     R.AddressOf(Evt_br))
+        # try:
+        #     chains['Vtx'][iCh].SetBranchAddress('Vertex',    R.AddressOf(Vtx_br))
+        # except:
+        #     presentTree_l1RecoTree = False
             
         # try:
         #     chains['Jet'][iCh].SetBranchAddress('Jet',       R.AddressOf(Jet_br))
@@ -1826,17 +1858,17 @@ def run():
         # except:
         #     presentTree_l1MuonRecoTree = False 
 
-        try:
-            chains['Ele'][iCh].SetBranchAddress('Electron',       R.AddressOf(Ele_br))
-        except:
-            presentTree_l1EleRecoTree = False
+        # try:
+        #     chains['Ele'][iCh].SetBranchAddress('Electron',       R.AddressOf(Ele_br))
+        # except:
+        #     presentTree_l1EleRecoTree = False
             
         chains['Unp'][iCh].SetBranchAddress('L1Upgrade', R.AddressOf(Unp_br))
         # chains['Emu'][iCh].SetBranchAddress('L1Upgrade', R.AddressOf(Emu_br))
-        chains['uTP'][iCh].SetBranchAddress('CaloTP',      R.AddressOf(uTP_br))
-        chains['eTP'][iCh].SetBranchAddress('CaloTP',      R.AddressOf(eTP_br))
+        # chains['uTP'][iCh].SetBranchAddress('CaloTP',      R.AddressOf(uTP_br))
+        # chains['eTP'][iCh].SetBranchAddress('CaloTP',      R.AddressOf(eTP_br))
         # chains['uTP'][iCh].SetBranchAddress('L1CaloTower', R.AddressOf(uTT_br))
-        chains['eTP'][iCh].SetBranchAddress('L1CaloTower', R.AddressOf(eTT_br))
+        # chains['eTP'][iCh].SetBranchAddress('L1CaloTower', R.AddressOf(eTT_br))
         #chains['uTP'][iCh].SetBranchAddress('L1CaloCluster', R.AddressOf(uTC_br))
         # chains['eTP'][iCh].SetBranchAddress('L1CaloCluster', R.AddressOf(eTC_br))
         try:
@@ -1910,33 +1942,33 @@ def run():
             hStat.Fill(1)
             
             #if VERBOSE and iEvt % PRT_EVT is 0: print '  * Run %d, LS %d, event %d, nVtx %d' % (int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event), int(Vtx_br.nVtx))
-            if VERBOSE and iEvt % PRT_EVT == 0: print('  * Run:LS:Event:  %d:%d:%d,  nVtx %d' % (int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event), int(Vtx_br.nVtx)))
+            # if VERBOSE and iEvt % PRT_EVT == 0: print('  * Run:LS:Event:  %d:%d:%d,  nVtx %d' % (int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event), int(Vtx_br.nVtx)))
 
 
             # Apply HLT triggers requirements -------------------------------------------------
             if not isMC and len(HLT_Triggers_Required) > 0:
-                passHLTTrgs = False
-                if PrintLevel >= 20:
-                    print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
-                for iHlt in range(Evt_br.hlt.size()):
-                    if PrintLevel >= 20:
-                        #print(f" {}")
-                        print(f"    {iHlt} {type(Evt_br.hlt[iHlt])}: {Evt_br.hlt[iHlt]}"); sys.stdout.flush();
-                    for HLT_TRG_name_required in HLT_Triggers_Required:
-                        if PrintLevel >= 20:
-                            print(f"         {type(HLT_TRG_name_required)} {HLT_TRG_name_required}"); sys.stdout.flush();
-                        if HLT_TRG_name_required in str(Evt_br.hlt[iHlt]):
-                            if PrintLevel >= 20:
-                                print(f"            passHLTTrgs = True"); sys.stdout.flush();
-                            passHLTTrgs = True
-                            break
+                passHLTTrgs = True      #was False
+                # if PrintLevel >= 20:
+                #     print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
+                # for iHlt in range(Evt_br.hlt.size()):
+                #     if PrintLevel >= 20:
+                #         #print(f" {}")
+                #         print(f"    {iHlt} {type(Evt_br.hlt[iHlt])}: {Evt_br.hlt[iHlt]}"); sys.stdout.flush();
+                #     for HLT_TRG_name_required in HLT_Triggers_Required:
+                #         if PrintLevel >= 20:
+                #             print(f"         {type(HLT_TRG_name_required)} {HLT_TRG_name_required}"); sys.stdout.flush();
+                #         if HLT_TRG_name_required in str(Evt_br.hlt[iHlt]):
+                #             if PrintLevel >= 20:
+                #                 print(f"            passHLTTrgs = True"); sys.stdout.flush();
+                #             passHLTTrgs = True
+                #             break
 
                     # it is sufficient if one of the HLT_TRG is fired
-                    if passHLTTrgs:
-                        break
+                #     if passHLTTrgs:
+                #         break
 
-                if not passHLTTrgs: 
-                    continue
+                # if not passHLTTrgs: 
+                #     continue
 
             hStat.Fill(2)
             
@@ -1975,15 +2007,15 @@ def run():
                 print(f"Jet_br: {Jet_br}"); sys.stdout.flush()
                 print(f"{Jet_br.puppi_nJets = }"); sys.stdout.flush()
             
-            nOffJets  = int(Jet_br.puppi_nJets) if offlinePUPPIJet elif usingL1Nano int(Jet_br.nJets) else int(Jet_br.nJets)
+            nOffJets  = int(Jet_br.puppi_nJets) if offlinePUPPIJet else int(Jet_br.nJets)
             nOffMuons = int(Muon_br.nMuons)
             nOffEles  = int(Ele_br.nElectrons)
             nUnpJets  = int(Unp_br.nJets)
             nEmuJets  = int(Emu_br.nJets)
-            nUnpHTPs  = int(uTP_br.nHCALTP)
-            nEmuHTPs  = int(eTP_br.nHCALTP)
-            nUnpETPs  = int(uTP_br.nECALTP)
-            nEmuETPs  = int(eTP_br.nECALTP)
+            # nUnpHTPs  = int(uTP_br.nHCALTP)
+            # nEmuHTPs  = int(eTP_br.nHCALTP)
+            # nUnpETPs  = int(uTP_br.nECALTP)
+            # nEmuETPs  = int(eTP_br.nECALTP)
             nUnpTTs   = int(uTT_br.nTower)
             nEmuTTs   = int(eTT_br.nTower)
             nUnpTCs   = int(uTC_br.nCluster)
@@ -2045,13 +2077,13 @@ def run():
                     # print(f"  {iMu}: charge {Muon_br.charge[iMu]}, e {Muon_br.e[iMu]}, et {Muon_br.et[iMu]}, pt {Muon_br.pt[iMu]}, eta {Muon_br.eta[iMu]}, phi {Muon_br.phi[iMu]}, mt {Muon_br.mt[iMu]}, met {Muon_br.met[iMu]}, isLooseMuon {Muon_br.isLooseMuon[iMu]}, isMediumMuon {Muon_br.isMediumMuon[iMu]}, isTightMuon {Muon_br.isTightMuon[iMu]}, iso {Muon_br.iso[iMu]}, passesSingleMuon {Muon_br.passesSingleMuon[iMu]}, hlt_mu {Muon_br.hlt_mu[iMu]}, hlt_isomu {Muon_br.hlt_isomu[iMu]}, hlt_deltaR {Muon_br.hlt_deltaR[iMu]}, hlt_isoDeltaR {Muon_br.hlt_isoDeltaR[iMu]} " )
                 
                 print("OffEles (%d)::" %(nOffEles))
-                for iEle in range(nOffEles):
-                    print(f"  {iEle}: charge {Ele_br.charge[iEle]}, e {Ele_br.e[iEle]}, et {Ele_br.et[iEle]}, pt {Ele_br.pt[iEle]}, eta {Ele_br.eta[iEle]}, phi {Ele_br.phi[iEle]}, isLooseElectron {Ele_br.isLooseElectron[iEle]}, isMediumElectron {Ele_br.isMediumElectron[iEle]}, isTightElectron {Ele_br.isTightElectron[iEle]}, isVetoElectron {Ele_br.isVetoElectron[iEle]}, iso {Ele_br.iso[iEle]} " )
+                # for iEle in range(nOffEles):
+                #     print(f"  {iEle}: charge {Ele_br.charge[iEle]}, e {Ele_br.e[iEle]}, et {Ele_br.et[iEle]}, pt {Ele_br.pt[iEle]}, eta {Ele_br.eta[iEle]}, phi {Ele_br.phi[iEle]}, isLooseElectron {Ele_br.isLooseElectron[iEle]}, isMediumElectron {Ele_br.isMediumElectron[iEle]}, isTightElectron {Ele_br.isTightElectron[iEle]}, isVetoElectron {Ele_br.isVetoElectron[iEle]}, iso {Ele_br.iso[iEle]} " )
 
-                print(f"Evt_br.hlt ({type(Evt_br.hlt)}): {Evt_br.hlt}")
-                print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}")
-                for iHlt in range(Evt_br.hlt.size()):
-                    print(f"    {iHlt}: {Evt_br.hlt[iHlt]}")
+                # print(f"Evt_br.hlt ({type(Evt_br.hlt)}): {Evt_br.hlt}")
+                # print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}")
+                # for iHlt in range(Evt_br.hlt.size()):
+                #     print(f"    {iHlt}: {Evt_br.hlt[iHlt]}")
 
             
             if PrintLevel >= 2:
@@ -2062,8 +2094,8 @@ def run():
 
                 print(f"nEmuJets: {nEmuJets}")
                 for iJ in range(nEmuJets):
-                    if Emu_br.jetBx[iJ] != 0: continue
-                    print(f"{' '*4} {iJ}: Et {Emu_br.jetEt[iJ]}, Eta {Emu_br.jetEta[iJ]}, Phi {Emu_br.jetPhi[iJ]}, Bx {Emu_br.jetBx[iJ]},  ")
+                    if Emu_br.bx[iJ] != 0: continue
+                    print(f"{' '*4} {iJ}: Et {Emu_br.pt[iJ]}, Eta {Emu_br.eta[iJ]}, Phi {Emu_br.phi[iJ]}, Bx {Emu_br.bx[iJ]},  ")
 
                 print(f"nOffJets: {nOffJets}")
                 for iJ in range(nOffJets):
@@ -2083,11 +2115,11 @@ def run():
 
             nEmuJets_Bx0 = 0
             for iJ in range(nEmuJets):
-                if Emu_br.jetBx[iJ] != 0: continue
+                if Emu_br.bx[iJ] != 0: continue
                 nEmuJets_Bx0 += 1
-                hL1JetEmu_Pt_0.Fill(Emu_br.jetEt[iJ])
-                hL1JetEmu_Eta_0.Fill(Emu_br.jetEta[iJ])
-                hL1JetEmu_Phi_0.Fill(Emu_br.jetPhi[iJ])
+                hL1JetEmu_Pt_0.Fill(Emu_br.pt[iJ])
+                hL1JetEmu_Eta_0.Fill(Emu_br.eta[iJ])
+                hL1JetEmu_Phi_0.Fill(Emu_br.phi[iJ])
             hnL1JetEmu_0.Fill(nEmuJets_Bx0)
 
             
@@ -2387,7 +2419,7 @@ def run():
                                 ##isForwardJet          and Jet_br.nhef[iOff]  <= 0.20, # neutralHadronEnergyFraction()
                                 isForwardJet          and Jet_br.neEmEF[iOff] >= 0.40, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
                                 isForwardJet          and Jet_br.neMultiplicity[iOff] <= 10 , # jet_data->nMult.push_back(it->neutralMultiplicity());
-                            ]is
+                            ]
 
                         else:
                             reject_if = [
@@ -2490,7 +2522,7 @@ def run():
                     idx_OffEle_nearestToOffJet = -1
                     for iEle in range(nOffEles):
                         # electron selection
-                        if not Ele_br.isMediumElectron[iEle]: continue
+                        # if not Ele_br.isMediumElectron[iEle]: continue
                         
                         vOffEle = R.TLorentzVector()
                         vOffEle.SetPtEtaPhiM(Ele_br.pt[iEle], Ele_br.eta[iEle], Ele_br.phi[iEle], MASS_ELECTRON)
@@ -2662,11 +2694,11 @@ def run():
 
                     nEmuJets_Bx0 = 0
                     for iJ in range(nEmuJets):
-                        if Emu_br.jetBx[iJ] != 0: continue
+                        if Emu_br.bx[iJ] != 0: continue
                         nEmuJets_Bx0 += 1
-                        hL1JetEmu_Pt_1.Fill(Emu_br.jetEt[iJ])
-                        hL1JetEmu_Eta_1.Fill(Emu_br.jetEta[iJ])
-                        hL1JetEmu_Phi_1.Fill(Emu_br.jetPhi[iJ])
+                        hL1JetEmu_Pt_1.Fill(Emu_br.pt[iJ])
+                        hL1JetEmu_Eta_1.Fill(Emu_br.eta[iJ])
+                        hL1JetEmu_Phi_1.Fill(Emu_br.phi[iJ])
                     hnL1JetEmu_1.Fill(nEmuJets_Bx0)
 
                 # plot pT, eta, phi of L1JetUnp jet matched to RefJet 
@@ -2688,16 +2720,16 @@ def run():
                 idxL1Jet_matchedRefJet = -1
                 L1JetPt_matchedRefJet = 0
                 for iJ in range(nEmuJets): 
-                    if Emu_br.jetBx[iJ] != 0: continue 
+                    if Emu_br.bx[iJ] != 0: continue 
                     vL1Jet_ = R.TLorentzVector()
-                    vL1Jet_.SetPtEtaPhiM(Emu_br.jetEt[iJ], Emu_br.jetEta[iJ], Emu_br.jetPhi[iJ], 0) 
+                    vL1Jet_.SetPtEtaPhiM(Emu_br.pt[iJ], Emu_br.eta[iJ], Emu_br.phi[iJ], 0) 
                     if vL1Jet_.DeltaR(vOff) < DR_MAX and vL1Jet_.Pt() > L1JetPt_matchedRefJet:
                         idxL1Jet_matchedRefJet = iJ
                         L1JetPt_matchedRefJet = vL1Jet_.Pt()
                 if idxL1Jet_matchedRefJet >= 0:
-                    hL1JetEmu_Pt_2.Fill(Emu_br.jetEt[idxL1Jet_matchedRefJet])
-                    hL1JetEmu_Eta_2.Fill(Emu_br.jetEta[idxL1Jet_matchedRefJet])
-                    hL1JetEmu_Phi_2.Fill(Emu_br.jetPhi[idxL1Jet_matchedRefJet])                                            
+                    hL1JetEmu_Pt_2.Fill(Emu_br.pt[idxL1Jet_matchedRefJet])
+                    hL1JetEmu_Eta_2.Fill(Emu_br.eta[idxL1Jet_matchedRefJet])
+                    hL1JetEmu_Phi_2.Fill(Emu_br.phi[idxL1Jet_matchedRefJet])                                            
                 
 
 
@@ -2816,7 +2848,7 @@ def run():
                     print("  * EmuJets ({}):: ".format(nEmuJets))                
                 for iEmu in range(nEmuJets):
 
-                    if Emu_br.jetBx[iEmu] != 0: continue  ## Use only jets in BX 0
+                    if Emu_br.bx[iEmu] != 0: continue  ## Use only jets in BX 0
 
                     hStat.Fill(13)
                     
@@ -2824,10 +2856,10 @@ def run():
                     for algo in ['PUS','noPUS','Raw','RawPUS']:
                         vEmu[algo] = R.TLorentzVector()  ## Create a 4-vector of the L1T jet
 
-                    vEmu['PUS']   .SetPtEtaPhiM(Emu_br.jetEt[iEmu],                           Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu], 0)
-                    vEmu['noPUS'] .SetPtEtaPhiM(Emu_br.jetEt[iEmu]    + Emu_br.jetPUEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu], 0)
-                    vEmu['Raw']   .SetPtEtaPhiM(Emu_br.jetRawEt[iEmu],                        Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu], 0)
-                    vEmu['RawPUS'].SetPtEtaPhiM(Emu_br.jetRawEt[iEmu] - Emu_br.jetPUEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu], 0)
+                    vEmu['PUS']   .SetPtEtaPhiM(Emu_br.pt[iEmu],                           Emu_br.eta[iEmu], Emu_br.phi[iEmu], 0)
+                    vEmu['noPUS'] .SetPtEtaPhiM(Emu_br.pt[iEmu]    + Emu_br.puEt[iEmu], Emu_br.eta[iEmu], Emu_br.phi[iEmu], 0)
+                    vEmu['Raw']   .SetPtEtaPhiM(Emu_br.rawEt[iEmu],                        Emu_br.eta[iEmu], Emu_br.phi[iEmu], 0)
+                    vEmu['RawPUS'].SetPtEtaPhiM(Emu_br.rawEt[iEmu] - Emu_br.puEt[iEmu], Emu_br.eta[iEmu], Emu_br.phi[iEmu], 0)
 
                     for algo in ['PUS','noPUS','Raw','RawPUS']:
                         if vEmu[algo].DeltaR(vOff) < DR_MAX and vEmu[algo].Pt() > max_pt['emu'][algo]:
@@ -2835,14 +2867,14 @@ def run():
                             vMax  ['emu'][algo] = vEmu[algo]
                             matchedEmuIdx['emu'][algo] = iEmu
 
-                    #hist_L1Jet_emu_TowerIEta_vs_IEta.Fill(Emu_br.jetTowerIEta[iEmu], Emu_br.jetIEta[iEmu])
-                    #hist_L1Jet_emu_TowerIPhi_vs_IPhi.Fill(Emu_br.jetTowerIPhi[iEmu], Emu_br.jetIPhi[iEmu])
-                    if PrintLevel >= 12:
-                        print("    Emu {}: jetEt {}, jetEta {}, jetPhi {}, jetIEt {}, jetIEta {}, jetIPhi {},  jetBx {}, jetTowerIPhi {}, jetTowerIEta {}, jetRawEt {}, jetSeedEt {},  jetPUEt {}, jetPUDonutEt0 {}, jetPUDonutEt1 {}, jetPUDonutEt2 {}, jetPUDonutEt3 {}".format(iUnp, \
-                            Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu], Emu_br.jetIEt[iEmu], Emu_br.jetIEta[iEmu], Emu_br.jetIPhi[iEmu], \
-                            Emu_br.jetBx[iEmu], Emu_br.jetTowerIPhi[iEmu], Emu_br.jetTowerIEta[iEmu], Emu_br.jetRawEt[iEmu], Emu_br.jetSeedEt[iEmu], \
-                            Emu_br.jetPUEt[iEmu], Emu_br.jetPUDonutEt0[iEmu], Emu_br.jetPUDonutEt1[iEmu], Emu_br.jetPUDonutEt2[iEmu], Emu_br.jetPUDonutEt3[iEmu]
-                        ) )                                               
+                    #hist_L1Jet_emu_TowerIEta_vs_IEta.Fill(Emu_br.towerIEta[iEmu], Emu_br.jetIEta[iEmu])
+                    #hist_L1Jet_emu_TowerIPhi_vs_IPhi.Fill(Emu_br.towerIPhi[iEmu], Emu_br.jetIPhi[iEmu])
+                    # if PrintLevel >= 12:
+                        # print("    Emu {}: jetEt {}, jetEta {}, jetPhi {}, jetIEt {}, jetIEta {}, jetIPhi {},  jetBx {}, jetTowerIPhi {}, jetTowerIEta {}, jetRawEt {}, jetSeedEt {},  jetPUEt {}, jetPUDonutEt0 {}, jetPUDonutEt1 {}, jetPUDonutEt2 {}, jetPUDonutEt3 {}".format(iUnp, \
+                        #     Emu_br.pt[iEmu], Emu_br.eta[iEmu], Emu_br.phi[iEmu], Emu_br.jetIEt[iEmu], Emu_br.jetIEta[iEmu], Emu_br.jetIPhi[iEmu], \
+                        #     Emu_br.bx[iEmu], Emu_br.towerIPhi[iEmu], Emu_br.towerIEta[iEmu], Emu_br.rawEt[iEmu], Emu_br.seedEt[iEmu], \
+                        #     Emu_br.puEt[iEmu], Emu_br.jetPUDonutEt0[iEmu], Emu_br.jetPUDonutEt1[iEmu], Emu_br.jetPUDonutEt2[iEmu], Emu_br.jetPUDonutEt3[iEmu]
+                        # ) )                                               
                 ## End loop: for iEmu in range(nEmuJets)
 
                 #print "    dR(emuJet, offlineJet):: PUS: {}, npPUS: {}, Raw: {}, RawPUS: {}".format(vMax['emu']['PUS'].DeltaR(vOff), vMax['emu']['noPUS'].DeltaR(vOff), vMax['emu']['Raw'].DeltaR(vOff), vMax['emu']['RawPUS'].DeltaR(vOff))
@@ -2901,33 +2933,33 @@ def run():
                     elif src == 'emu':
                         l1TP_br = eTP_br                               
 
-                    if PrintLevel >= 8:
-                        print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
-                        for iTP in range(l1TP_br.nECALTP):
-                            print(" {} ecalTPieta {}".format( iTP, l1TP_br.ecalTPieta[iTP]))
-                            print(" {} ecalTPiphi {}".format( iTP, l1TP_br.ecalTPiphi[iTP]))
-                            print(" {} ecalTPiCaliphi {}".format( iTP, l1TP_br.ecalTPCaliphi[iTP]))
-                            print(" {} ecalTPet {}".format( iTP, l1TP_br.ecalTPet[iTP]))
-                            print(" {} ecalTPcompEt {}".format( iTP, l1TP_br.ecalTPcompEt[iTP]))
-                            print(" {} ecalTPfineGrain {}".format( iTP, l1TP_br.ecalTPfineGrain[iTP]))
+                    # if PrintLevel >= 8:
+                    #     print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
+                    #     for iTP in range(l1TP_br.nECALTP):
+                    #         print(" {} ecalTPieta {}".format( iTP, l1TP_br.ecalTPieta[iTP]))
+                    #         print(" {} ecalTPiphi {}".format( iTP, l1TP_br.ecalTPiphi[iTP]))
+                    #         print(" {} ecalTPiCaliphi {}".format( iTP, l1TP_br.ecalTPCaliphi[iTP]))
+                    #         print(" {} ecalTPet {}".format( iTP, l1TP_br.ecalTPet[iTP]))
+                    #         print(" {} ecalTPcompEt {}".format( iTP, l1TP_br.ecalTPcompEt[iTP]))
+                    #         print(" {} ecalTPfineGrain {}".format( iTP, l1TP_br.ecalTPfineGrain[iTP]))
                             
-                            print("{} {}: ecalTPieta {}, ecalTPiphi {}, ecalTPCaliphi {}, ecalTPet {}, ecalTPcompEt {}, ecalTPfineGrain {}".format(" "*6, iTP, l1TP_br.ecalTPieta[iTP], l1TP_br.ecalTPiphi[iTP], l1TP_br.ecalTPCaliphi[iTP], l1TP_br.ecalTPet[iTP], l1TP_br.ecalTPcompEt[iTP], l1TP_br.ecalTPfineGrain[iTP]))
+                    #         print("{} {}: ecalTPieta {}, ecalTPiphi {}, ecalTPCaliphi {}, ecalTPet {}, ecalTPcompEt {}, ecalTPfineGrain {}".format(" "*6, iTP, l1TP_br.ecalTPieta[iTP], l1TP_br.ecalTPiphi[iTP], l1TP_br.ecalTPCaliphi[iTP], l1TP_br.ecalTPet[iTP], l1TP_br.ecalTPcompEt[iTP], l1TP_br.ecalTPfineGrain[iTP]))
                         
-                        print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
-                        for iTP in range(l1TP_br.nHCALTP):
-                            print("{} {}: hcalTPieta {}, hcalTPiphi {}, hcalTPCaliphi {}, hcalTPet {}, hcalTPcompEt {}, hcalTPfineGrain {}".format(" "*6, iTP, l1TP_br.hcalTPieta[iTP], l1TP_br.hcalTPiphi[iTP], l1TP_br.hcalTPCaliphi[iTP], l1TP_br.hcalTPet[iTP], l1TP_br.hcalTPcompEt[iTP], l1TP_br.hcalTPfineGrain[iTP]))
+                    #     print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
+                    #     for iTP in range(l1TP_br.nHCALTP):
+                    #         print("{} {}: hcalTPieta {}, hcalTPiphi {}, hcalTPCaliphi {}, hcalTPet {}, hcalTPcompEt {}, hcalTPfineGrain {}".format(" "*6, iTP, l1TP_br.hcalTPieta[iTP], l1TP_br.hcalTPiphi[iTP], l1TP_br.hcalTPCaliphi[iTP], l1TP_br.hcalTPet[iTP], l1TP_br.hcalTPcompEt[iTP], l1TP_br.hcalTPfineGrain[iTP]))
                         
-                    for iTP in range(l1TP_br.nECALTP):
-                        if 'ECAP_TP_et_vs_iEta_vs_nVts' in dists6:
-                            hist6['ECAP_TP_et_vs_iEta_vs_nVts'][src][iCh].    Fill( l1TP_br.ecalTPieta[iTP], nVtx, l1TP_br.ecalTPet[iTP],     puWeight )
-                        if 'ECAP_TP_compEt_vs_iEta_vs_nVts' in dists6:
-                            hist6['ECAP_TP_compEt_vs_iEta_vs_nVts'][src][iCh].Fill( l1TP_br.ecalTPieta[iTP], nVtx, l1TP_br.ecalTPcompEt[iTP], puWeight )
+                    # for iTP in range(l1TP_br.nECALTP):
+                    #     if 'ECAP_TP_et_vs_iEta_vs_nVts' in dists6:
+                    #         hist6['ECAP_TP_et_vs_iEta_vs_nVts'][src][iCh].    Fill( l1TP_br.ecalTPieta[iTP], nVtx, l1TP_br.ecalTPet[iTP],     puWeight )
+                    #     if 'ECAP_TP_compEt_vs_iEta_vs_nVts' in dists6:
+                    #         hist6['ECAP_TP_compEt_vs_iEta_vs_nVts'][src][iCh].Fill( l1TP_br.ecalTPieta[iTP], nVtx, l1TP_br.ecalTPcompEt[iTP], puWeight )
                     
-                    for iTP in range(l1TP_br.nHCALTP):
-                        if 'HCAP_TP_et_vs_iEta_vs_nVts' in dists6:
-                            hist6['HCAP_TP_et_vs_iEta_vs_nVts'][src][iCh].    Fill( l1TP_br.hcalTPieta[iTP], nVtx, l1TP_br.hcalTPet[iTP],     puWeight )
-                        if 'HCAP_TP_compEt_vs_iEta_vs_nVts' in dists6:
-                            hist6['HCAP_TP_compEt_vs_iEta_vs_nVts'][src][iCh].Fill( l1TP_br.hcalTPieta[iTP], nVtx, l1TP_br.hcalTPcompEt[iTP], puWeight )
+                    # for iTP in range(l1TP_br.nHCALTP):
+                    #     if 'HCAP_TP_et_vs_iEta_vs_nVts' in dists6:
+                    #         hist6['HCAP_TP_et_vs_iEta_vs_nVts'][src][iCh].    Fill( l1TP_br.hcalTPieta[iTP], nVtx, l1TP_br.hcalTPet[iTP],     puWeight )
+                    #     if 'HCAP_TP_compEt_vs_iEta_vs_nVts' in dists6:
+                    #         hist6['HCAP_TP_compEt_vs_iEta_vs_nVts'][src][iCh].Fill( l1TP_br.hcalTPieta[iTP], nVtx, l1TP_br.hcalTPcompEt[iTP], puWeight )
 
                     
 
@@ -3023,7 +3055,7 @@ def run():
                             if Unp_br.jetBx[iUnp] != 0: continue  ## Use only jets in BX 0
 
                             # Unp_br.jetEt[iUnp], Unp_br.jetEta[iUnp], Unp_br.jetPhi[iUnp]
-                            # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
+                            # Emu_br.pt[iEmu], Emu_br.eta[iEmu], Emu_br.phi[iEmu]
                             # l1jet_idx
                             # l1jet_br
                             if  ( (abs(Unp_br.jetEt[iUnp]  - l1jet_br.jetEt[l1jet_idx])  < 1e-8) and \
