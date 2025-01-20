@@ -449,7 +449,7 @@ class evt_br:
         # Loop through the expected branches and set attributes
         for branch_name, attr_name in branch_map.items():
             if branch_name in branches:
-                setattr(self, attr_name, int(branches[branch_name][0]))
+                setattr(self, attr_name, branches[branch_name])
             else:
                 setattr(self, attr_name, None) 
 
@@ -1436,193 +1436,478 @@ nTotalEvents_byChains = []
 Ntot=len(Jet_br.pt)
 
 
-
-dataEra='2024E'
-
-l1MatchGen= True
-
-
+l1MatchGen= False
+nTotalEvents_byChains=[]
+nTotalEvents_byChains.append(0)
 for iEvent in range(Ntot):
-    NJets= Jet_br.nJets[iEvent]
+
+    l1JetRef_br = None
+    nRefJets    = 0
     et_RefJets  = None
     eta_RefJets = None
     phi_RefJets = None
+    NJets= Jet_br.nJets[iEvent]
     nOffJets= Jet_br.nJets[iEvent]
     et_RefJets=Jet_br.pt[iEvent]
     eta_RefJets=Jet_br.eta[iEvent]
     phi_RefJets=Jet_br.phi[iEvent]
 
+
+
+    nTotalEvents_byChains[0] += 1
+    hStat.Fill(0)
+
+    if not isMC and len(GoldenJSONForData_list) > 0:
+        if not passGoldenJSON(goldenJSON, int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent])):
+            #print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event))); sys.stdout.flush();
+            continue
+
+    dataEra = ''
+    if not isMC:
+        for Era_, eraRunRange_ in dataErasRunRange.items():
+            if int(Evt_br.run[iEvent]) >= eraRunRange_[0] and int(Evt_br.run[iEvent]) <= eraRunRange_[1]:
+                dataEra = Era_
+                break
+
+    hStat.Fill(1)
+
+    
+    hCaloTowers_iEta_vs_iPhi = None
+    hCaloTTs_iEta_vs_iPhi    = None
+
+    if sFInEventsToRun: # and runMode in ['trbshtPhiRingPUS']:
+        sRunLSEvent = "%s:%s:%s" % (int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent]), int(Evt_br.event[iEvent]))
+        sRunLSEvent_toUse = sRunLSEvent.replace(":", "_") 
+        if sRunLSEvent not in eventsToRun_list: continue
+        print("Ruuning on selected event %s" % (sRunLSEvent))
+
+    puWeight = 1.0
+    nVtx = Vtx_br.nVtx[iEvent]
+
+    if usePUReweighting:
+        bin_puWeight = hPUWt.FindBin(nVtx);
+        puWeight = hPUWt.GetBinContent(bin_puWeight);
+
+    hnVtx.Fill(nVtx);    
+    hnVtx_ReWtd.Fill(nVtx, puWeight);
+
+    nOffJets  = int(Jet_br.nJets[iEvent])
+    nOffMuons = int(Muon_br.nMuons[iEvent])
+    nOffEles  = int(Ele_br.nElectrons[iEvent])
+    nEmuJets  = int(Emu_br.nJets[iEvent])
+    # nEmuHTPs  = int(eTP_br.nHCALTP[iEvent])
+    # nEmuETPs  = int(eTP_br.nECALTP[iEvent])
+    nEmuTTs   = int(eTT_br.nTower[iEvent])
+    # nEmuTCs   = int(eTC_br.nCluster[iEvent])
+    # nGenJets  = int(Gen_br.nJet[iEvent])
+    l1MatchOffline= True
+    offlinePUPPIJet = False
+
+    if   l1MatchOffline:
+        #if offlineJetType == 'PUPPI':
+        if offlinePUPPIJet:
+            nRefJets     = Jet_br.puppi_nJets
+            et_RefJets   = Jet_br.puppi_etCorr
+            eta_RefJets  = Jet_br.puppi_eta
+            phi_RefJets  = Jet_br.puppi_phi
+            #print(f"PUPPI jets")
+        else:
+            # PF CHS jets
+            nRefJets     = Jet_br.nJets[iEvent]
+            et_RefJets   = Jet_br.pt[iEvent]
+            eta_RefJets  = Jet_br.eta[iEvent]
+            phi_RefJets  = Jet_br.phi[iEvent]                    
+    elif l1MatchGen:
+        nRefJets     = Gen_br.nJet[iEvent]
+        et_RefJets   = Gen_br.jetPt[iEvent]
+        eta_RefJets  = Gen_br.jetEta[iEvent]
+        phi_RefJets  = Gen_br.jetPhi[iEvent]
+
+    
+    hnVts_vs_nTT_emu.Fill(nVtx, nEmuTTs)
+    nEmuJets_Bx0 = 0
+    for iJ in range(nEmuJets):
+        if Emu_br.bx[iEvent][iJ] != 0: continue
+        nEmuJets_Bx0 += 1
+        hL1JetEmu_Pt_0.Fill(Emu_br.pt[iEvent][iJ])
+        hL1JetEmu_Eta_0.Fill(Emu_br.eta[iEvent][iJ])
+        hL1JetEmu_Phi_0.Fill(Emu_br.phi[iEvent][iJ])
+    hnL1JetEmu_0.Fill(nEmuJets_Bx0)
+
+    for iJ in range(nOffJets):
+        if offlinePUPPIJet:
+            hOfflineJet_Pt_0.Fill(Jet_br.puppi_etCorr[iJ])
+            hOfflineJet_Eta_0.Fill(Jet_br.puppi_eta[iJ])
+            hOfflineJet_Phi_0.Fill(Jet_br.puppi_phi[iJ])
+        else:
+            hOfflineJet_Pt_0.Fill(Jet_br.pt[iEvent][iJ])
+            hOfflineJet_Eta_0.Fill(Jet_br.eta[iEvent][iJ])
+            hOfflineJet_Phi_0.Fill(Jet_br.phi[iEvent][iJ])                    
+    hnOfflineJet_0.Fill(nOffJets)
+
+    # for src in ['emu']:
+    #     TT_br_toUse = None
+    #     TP_br_toUse = None
+    #     if src == 'unp':
+    #         TT_br_toUse = uTT_br 
+    #         TP_br_toUse = uTP_br 
+    #     else:
+    #         TT_br_toUse = eTT_br
+    #         TP_br_toUse = eTP_br                    
+        
+    #     for iTT in range(TT_br_toUse.nTower):
+    #         sIEta = str(abs(TT_br_toUse.ieta[iTT]))
+    #         hist8['TT_iet'][src][sIEta].Fill(TT_br_toUse.iet[iTT])
+        
+    #     for iTP in range(TP_br_toUse.nECALTP):
+    #         sIEta = str(abs(TP_br_toUse.ecalTPieta[iTP]))
+    #         hist8['ECALTP_et'    ][src][sIEta].Fill(TP_br_toUse.ecalTPet[iTP])
+    #         hist8['ECALTP_compEt'][src][sIEta].Fill(TP_br_toUse.ecalTPcompEt[iTP])
+            
+    #     for iTP in range(TP_br_toUse.nHCALTP):
+    #         sIEta = str(abs(TP_br_toUse.hcalTPieta[iTP]))
+    #         hist8['HCALTP_et'    ][src][sIEta].Fill(TP_br_toUse.hcalTPet[iTP])
+    #         hist8['HCALTP_compEt'][src][sIEta].Fill(TP_br_toUse.hcalTPcompEt[iTP])
+
+
+    #     if nRefJets == 1:
+    #         for iTT in range(TT_br_toUse.nTower):
+    #             sIEta = str(abs(TT_br_toUse.ieta[iTT]))
+    #             hist8['TT_iet_nRefJetsEq1'][src][sIEta].Fill(TT_br_toUse.iet[iTT])
+
+    #         for iTP in range(TP_br_toUse.nECALTP):
+    #             sIEta = str(abs(TP_br_toUse.ecalTPieta[iTP]))
+    #             hist8['ECALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_toUse.ecalTPet[iTP])
+    #             hist8['ECALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_toUse.ecalTPcompEt[iTP])
+
+    #         for iTP in range(TP_br_toUse.nHCALTP):
+    #             sIEta = str(abs(TP_br_toUse.hcalTPieta[iTP]))
+    #             hist8['HCALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_toUse.hcalTPet[iTP])
+    #             hist8['HCALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_toUse.hcalTPcompEt[iTP])
+            
+
+
+    # Apply HLT triggers requirements --------------------- needs update ----------------------------
+    # if not isMC and len(HLT_Triggers_Required) > 0:
+    #     passHLTTrgs = False
+    #     if PrintLevel >= 20:
+    #         print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
+    #     for iHlt in range(Evt_br.hlt.size()):
+    #         if PrintLevel >= 20:
+    #             #print(f" {}")
+    #             print(f"    {iHlt} {type(Evt_br.hlt[iHlt])}: {Evt_br.hlt[iHlt]}"); sys.stdout.flush();
+    #         for HLT_TRG_name_required in HLT_Triggers_Required:
+    #             if PrintLevel >= 20:
+    #                 print(f"         {type(HLT_TRG_name_required)} {HLT_TRG_name_required}"); sys.stdout.flush();
+    #             if HLT_TRG_name_required in str(Evt_br.hlt[iHlt]):
+    #                 if PrintLevel >= 20:
+    #                     print(f"            passHLTTrgs = True"); sys.stdout.flush();
+    #                 passHLTTrgs = True
+    #                 break
+
+    #         # it is sufficient if one of the HLT_TRG is fired
+    #         if passHLTTrgs:
+    #             break
+
+    #     if not passHLTTrgs: 
+    #         continue
+
+    # hStat.Fill(2)
+
+    l1JetCollection = OrderedDict()
+    for src in ['emu']:
+        l1JetCollection[src] = OrderedDict()
+        
+        #for jetShape in ['Default'] + JetShapes:
+        for jetShape in JetShapes + JetShapesType2:
+            l1JetCollection[src][jetShape] = OrderedDict()
+            
+            for algo1 in PUSAlgosAll + PUSAlgosAllType2: # ['Raw', 'RawPUS', 'RawPUS_phiRingMin4', 'RawPUS_phiRingSide4', 'RawPUS_phiRingAdjacent']:
+                # read proper jetShape and PUSAlgo conbination
+                if (jetShape in JetShapes      and algo1 not in PUSAlgosAll) or \
+                    (jetShape in JetShapesType2 and algo1 not in PUSAlgosAllType2 ):
+                    continue
+        
+                if (algo1 == 'L1JDefault') and (jetShape != 'Default'): continue
+                
+                l1JetCollection[src][jetShape][algo1] = OrderedDict()
+                
+                for ieta_cat in IETA_CAT.keys():
+                    if ieta_cat == 'HBEF': continue
+                    
+                    l1JetCollection[src][jetShape][algo1][ieta_cat] = []
+
+    ## Create list of offfline RECO jets which are too close to other RECO jets
+    bad_off_jets = []
+    ## Loop over all offline RECO jets
+    #for iOff in range(nOffJets):
+    for iOff in range(nRefJets):
+        iOff_vec = R.TLorentzVector()
+        iOff_vec.SetPtEtaPhiM(et_RefJets[iOff], eta_RefJets[iOff], phi_RefJets[iOff], 0)
+        
+        ## Loop over all offline RECO jets with higher pT
+        for jOff in range(iOff):
+            jOff_vec = R.TLorentzVector()
+            jOff_vec.SetPtEtaPhiM(et_RefJets[jOff], eta_RefJets[jOff], phi_RefJets[jOff], 0)
+
+            if iOff_vec.DeltaR(jOff_vec) < DR_MIN:
+                # print '\n  * Removing offline jet pT = %.1f, eta = %.2f, phi = %.2f' % (iOff_vec.Pt(), iOff_vec.Eta(), iOff_vec.Phi())
+                # print '  * Has dR = %.2f to jet pT = %.1f, eta = %.2f, phi = %.2f' % (iOff_vec.DeltaR(jOff_vec), jOff_vec.Pt(), jOff_vec.Eta(), jOff_vec.Phi())
+                bad_off_jets.append(iOff)
+                break
+
+    isFirstRefJet = True
+
     for iOff in range(NJets):
+
+        hStat.Fill(4)
+        hRefJet_pt_0.Fill(et_RefJets[iOff])
+        hRefJet_eta_0.Fill(eta_RefJets[iOff])
+        hRefJet_phi_0.Fill(phi_RefJets[iOff])
+        
+        ## Remove offline jets which overlap other jets
+        if iOff in bad_off_jets: continue
+
+        hRefJet_pt_0_1.Fill(et_RefJets[iOff])
+        hRefJet_eta_0_1.Fill(eta_RefJets[iOff])
+        hRefJet_phi_0_1.Fill(phi_RefJets[iOff])                
+        
+        hStat.Fill(5)
+
         vOff = R.TLorentzVector()
         vOff.SetPtEtaPhiM(et_RefJets[iOff], eta_RefJets[iOff], phi_RefJets[iOff], 0)               
         ### save l1jets reconstructed with different JetShape+PUS for single/double/tripple/qud-jet trigger rates ---------------------
-        l1JetCollection = OrderedDict()
-        for src in ['emu']:
-            l1JetCollection[src] = OrderedDict()
-            
-            #for jetShape in ['Default'] + JetShapes:
-            for jetShape in JetShapes + JetShapesType2:
-                l1JetCollection[src][jetShape] = OrderedDict()
+
+        
+        if   l1MatchOffline:
+            selectPFJet = True
+            ## PF jet filters as recommended by Aaron: https://github.com/cms-l1t-offline/cms-l1t-analysis/blob/master/cmsl1t/filters/jets.py
+            abs_eta = abs(eta_RefJets[iOff])
+            reject_if = None
+
+            if dataEra in [
+                '2022F', '2022G', 
+                '2023B', '2023C', '2023D', 
+                '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H' ]:
+                # https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#Recommendations_for_the_13_6_AN1
+                # https://github.com/bundocka/cmssw/blob/7d536e034f7dd0773eec3f306508c80c67fb1960/L1Trigger/L1TNtuples/plugins/L1JetRecoTreeProducer.cc#L689-L715
+
+                isCentralJet          =  abs_eta <= 2.6
+                isForwardCentralJet_1 = (abs_eta > 2.6 and abs_eta <= 2.7)
+                isForwardCentralJet_2 = (abs_eta > 2.7 and abs_eta <= 3.0)
+                isForwardJet          =  abs_eta > 3.0
+                reject_if = [
+                    isCentralJet          and Jet_br.neHEF[iEvent][iOff]  >= 0.99, # neutralHadronEnergyFraction()
+                    isCentralJet          and Jet_br.neEmEF[iEvent][iOff] >= 0.90, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
+                    isCentralJet          and (Jet_br.chMultiplicity[iEvent][iOff] + Jet_br.neMultiplicity[iEvent][iOff]) <= 1, # jet_data->cMult.push_back(it->chargedMultiplicity()); jet_data->nMult.push_back(it->neutralMultiplicity());
+                    isCentralJet          and Jet_br.muEF[iEvent][iOff]   >= 0.80, # jet_data->mef.push_back(it->muonEnergyFraction());
+                    isCentralJet          and Jet_br.chHEF[iEvent][iOff]  <= 0.01, # jet_data->chef.push_back(it->chargedHadronEnergyFraction());
+                    isCentralJet          and Jet_br.chMultiplicity[iEvent][iOff] == 0, # jet_data->cMult.push_back(it->chargedMultiplicity());
+                    isCentralJet          and Jet_br.chEmEF[iEvent][iOff] >= 0.80, # jet_data->cemef.push_back(it->chargedEmEnergyFraction());
+
+                    isForwardCentralJet_1 and Jet_br.neHEF[iEvent][iOff]  >= 0.90, # neutralHadronEnergyFraction()
+                    isForwardCentralJet_1 and Jet_br.neEmEF[iEvent][iOff] >= 0.99, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
+                    isForwardCentralJet_1 and Jet_br.muEF[iEvent][iOff]   >= 0.80, # jet_data->mef.push_back(it->muonEnergyFraction());
+                    isForwardCentralJet_1 and Jet_br.chEmEF[iEvent][iOff] >= 0.80, # jet_data->cemef.push_back(it->chargedEmEnergyFraction());
+
+                    isForwardCentralJet_2 and Jet_br.neEmEF[iEvent][iOff] >= 0.99, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());                             
+
+                    ##isForwardJet          and Jet_br.nhef[iOff]  <= 0.20, # neutralHadronEnergyFraction()
+                    isForwardJet          and Jet_br.neEmEF[iEvent][iOff] >= 0.40, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
+                    isForwardJet          and Jet_br.neMultiplicity[iEvent][iOff] <= 2, # jet_data->nMult.push_back(it->neutralMultiplicity());
+                ]
+                # print(reject_if)
+
+            if any(reject_if):
+                selectPFJet = False
+
+            if not selectPFJet: continue
+
+            hRefJet_pt_0_2.Fill(et_RefJets[iOff])
+            hRefJet_eta_0_2.Fill(eta_RefJets[iOff])
+            hRefJet_phi_0_2.Fill(phi_RefJets[iOff])     
+
+
+            passingJetMuOverlap = False
+            dR_OffJet_OffMu_min = 99999.0
+            idx_OffMu_nearestToOffJet = -1
+            nOffMuons= Muon_br.nMuons[iEvent]
+            nOffEles= Ele_br.nElectrons[iEvent]
+            for iMu in range(nOffMuons):
+                # muon selection
+                # if not Muon_br.isMediumMuon[iEvent][iMu]: continue
+                if not Muon_br.mediumId[iEvent][iMu]: continue
                 
-                for algo1 in PUSAlgosAll + PUSAlgosAllType2: # ['Raw', 'RawPUS', 'RawPUS_phiRingMin4', 'RawPUS_phiRingSide4', 'RawPUS_phiRingAdjacent']:
-                    # read proper jetShape and PUSAlgo conbination
-                    if (jetShape in JetShapes      and algo1 not in PUSAlgosAll) or \
-                        (jetShape in JetShapesType2 and algo1 not in PUSAlgosAllType2 ):
-                        continue
-            
-                    if (algo1 == 'L1JDefault') and (jetShape != 'Default'): continue
+                vOffMu = R.TLorentzVector()
+                vOffMu.SetPtEtaPhiM(Muon_br.pt[iEvent][iMu], Muon_br.eta[iEvent][iMu], Muon_br.phi[iEvent][iMu], MASS_MUON)
+
+                # MASS_ELECTRON
+                dr_tmp = vOff.DeltaR(vOffMu)
+                if dr_tmp < dR_OffJet_OffMu_min:
+                    dR_OffJet_OffMu_min = dr_tmp
+                    idx_OffMu_nearestToOffJet = iMu
+
+                if dr_tmp < DR_Jet_Ele_Min and Muon_br.pt[iEvent][iMu] / vOff.Pt() > RATIO_PtEle_PtJet_Max:
+                    passingJetMuOverlap = True
                     
-                    l1JetCollection[src][jetShape][algo1] = OrderedDict()
-                    
-                    for ieta_cat in IETA_CAT.keys():
-                        if ieta_cat == 'HBEF': continue
+
+            if idx_OffMu_nearestToOffJet != -1:
+                pTFraction_tmp = Muon_br.pt[iEvent][idx_OffMu_nearestToOffJet] / vOff.Pt()
+                hdR_OffJet_OffMu_min.Fill(dR_OffJet_OffMu_min)
+                hdR_OffJet_OffMu_min_vs_vOffMuPtByvOffJetPt.Fill(dR_OffJet_OffMu_min, pTFraction_tmp)
+                if pTFraction_tmp < 0.5:
+                    hdR_OffJet_OffMu_min_forPtFracLt0p5.Fill(dR_OffJet_OffMu_min)
+                
+                
+            # OfflineJet check with OfflineElectron for overlap ---------------------------------------
+            passingJetEleOverlap = False
+            dR_OffJet_OffEle_min = 99999.0
+            idx_OffEle_nearestToOffJet = -1
+            for iEle in range(nOffEles):
+                # electron selection
+                # if not Ele_br.isMediumElectron[iEvent][iEle]: continue
+                
+                vOffEle = R.TLorentzVector()
+                vOffEle.SetPtEtaPhiM(Ele_br.pt[iEvent][iEle], Ele_br.eta[iEvent][iEle], Ele_br.phi[iEvent][iEle], MASS_ELECTRON)
+
+                # MASS_ELECTRON
+                dr_tmp = vOff.DeltaR(vOffEle)
+                if dr_tmp < dR_OffJet_OffEle_min:
+                    dR_OffJet_OffEle_min = dr_tmp
+                    idx_OffEle_nearestToOffJet = iEle
+
+                if dr_tmp < DR_Jet_Ele_Min and Ele_br.pt[iEvent][iEle] / vOff.Pt() > RATIO_PtEle_PtJet_Max:
+                    passingJetEleOverlap = True
+
+
+            if idx_OffEle_nearestToOffJet != -1:
+                pTFraction_tmp = Ele_br.pt[iEvent][idx_OffEle_nearestToOffJet] / vOff.Pt()
+                hdR_OffJet_OffEle_min.Fill(dR_OffJet_OffEle_min)
+                hdR_OffJet_OffEle_min_vs_vOffElePtByvOffJetPt.Fill(dR_OffJet_OffEle_min, pTFraction_tmp)
+                if pTFraction_tmp < 0.5:
+                    hdR_OffJet_OffEle_min_forPtFracLt0p5.Fill(dR_OffJet_OffEle_min)
+
+
+            if passingJetMuOverlap: continue
+
+            hStat.Fill(7)
+
+            hRefJet_pt_0_3.Fill(et_RefJets[iOff])
+            hRefJet_eta_0_3.Fill(eta_RefJets[iOff])
+            hRefJet_phi_0_3.Fill(phi_RefJets[iOff])                
+
+            if passingJetEleOverlap: continue
+
+            hStat.Fill(8)
+
+            hRefJet_pt_0_4.Fill(et_RefJets[iOff])
+            hRefJet_eta_0_4.Fill(eta_RefJets[iOff])
+            hRefJet_phi_0_4.Fill(phi_RefJets[iOff])
+
+        # 2018 data: HE- dead zone (HEM15/16)
+        if not isMC:
+            # no PUPPI jets were stored in L1Ntuples for run2 data
+            if Evt_br.run[iEvent] > 319077 and Evt_br.run[iEvent] < 340000 and \
+                Jet_br.eta[iEvent][iOff] > -3.4  and Jet_br.eta[iEvent][iOff] < -1.17 and \
+                Jet_br.phi[iEvent][iOff] > -1.97 and Jet_br.phi[iEvent][iOff] < -0.47:
+                continue
+
+        hStat.Fill(9)
+
+        # save Reco jet pT for Gen jet ------------------------------------------------------------
+
+        if l1MatchGen:
+            off_vec_matchedTo_gen_vec = R.TLorentzVector()
+            off_vec_matchedTo_gen_vec.SetPtEtaPhiM(0, 0, 0, 0)
+            for iOff in range(nOffJets):
+                iOff_vec = R.TLorentzVector()
+                iOff_vec.SetPtEtaPhiM(Jet_br.pt[iEvent][iOff], Jet_br.eta[iEvent][iOff], Jet_br.phi[iEvent][iOff], 0)
+                if vOff.DeltaR(iOff_vec) < DR_MAX and iOff_vec.Pt() > off_vec_matchedTo_gen_vec.Pt():
+                    off_vec_matchedTo_gen_vec = iOff_vec
+
+        # TT, TP plots --------------------------------------------------------------------------------------------------------------------
+        # if isMC and useCutGenNVtxEq0 and (nRefJets == 1):
+        #     for src in ['emu']: #['unp','emu']:
+        #         TT_br_toUse = None
+        #         TP_br_toUse = None
+        #         TC_br_toUse = None
+        #         if src == 'unp':
+        #             TT_br_toUse = uTT_br 
+        #             TP_br_toUse = uTP_br
+        #             TC_br_toUse = uTC_br
+        #         else:
+        #             TT_br_toUse = eTT_br
+        #             TP_br_toUse = eTP_br
+        #             TC_br_toUse = eTC_br
+
+        #         TT28Abv125 = False
+        #         RefJetEtaAbs = abs(vOff.Eta())
+        #         if RefJetEtaAbs > 2.5 and RefJetEtaAbs < 3.1:
+        #             for iTT in range(TT_br_toUse.nTower):
+        #                 sIEta = str(abs(TT_br_toUse.ieta[iTT]))
+        #                 hist8['TT_iet_RefJetEtaBtw2p5And3p1'][src][sIEta].Fill(TT_br_toUse.iet[iTT])
                         
-                        l1JetCollection[src][jetShape][algo1][ieta_cat] = []
+        #                 if abs(TT_br_toUse.ieta[iTT]) in [ 28] and TT_br_toUse.iet[iTT] > 125:
+        #                         TT28Abv125 = True
+                                
 
-        hCaloTowers_iEta_vs_iPhi = None
-        hCaloTTs_iEta_vs_iPhi    = None
-        # print(iOff)
-        # print(vOff.Pt())
-        # print(Jet_br.neHEF[iEvent][iOff])
-        selectPFJet = True
-        ## PF jet filters as recommended by Aaron: https://github.com/cms-l1t-offline/cms-l1t-analysis/blob/master/cmsl1t/filters/jets.py
-        abs_eta = abs(eta_RefJets[iOff])
-        reject_if = None
+        #             for iTP in range(TP_br_toUse.nECALTP):
+        #                 sIEta = str(abs(TP_br_toUse.ecalTPieta[iTP]))
+        #                 hist8['ECALTP_et_RefJetEtaBtw2p5And3p1'    ][src][sIEta].Fill(TP_br_toUse.ecalTPet[iTP])
+        #                 hist8['ECALTP_compEt_RefJetEtaBtw2p5And3p1'][src][sIEta].Fill(TP_br_toUse.ecalTPcompEt[iTP])
 
-        if dataEra in [
-            '2022F', '2022G', 
-            '2023B', '2023C', '2023D', 
-            '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H' ]:
-            # https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#Recommendations_for_the_13_6_AN1
-            # https://github.com/bundocka/cmssw/blob/7d536e034f7dd0773eec3f306508c80c67fb1960/L1Trigger/L1TNtuples/plugins/L1JetRecoTreeProducer.cc#L689-L715
+        #             for iTP in range(TP_br_toUse.nHCALTP):
+        #                 sIEta = str(abs(TP_br_toUse.hcalTPieta[iTP]))
+        #                 hist8['HCALTP_et_RefJetEtaBtw2p5And3p1'    ][src][sIEta].Fill(TP_br_toUse.hcalTPet[iTP])
+        #                 hist8['HCALTP_compEt_RefJetEtaBtw2p5And3p1'][src][sIEta].Fill(TP_br_toUse.hcalTPcompEt[iTP])
 
-            isCentralJet          =  abs_eta <= 2.6
-            isForwardCentralJet_1 = (abs_eta > 2.6 and abs_eta <= 2.7)
-            isForwardCentralJet_2 = (abs_eta > 2.7 and abs_eta <= 3.0)
-            isForwardJet          =  abs_eta > 3.0
-            reject_if = [
-                isCentralJet          and Jet_br.neHEF[iEvent][iOff]  >= 0.99, # neutralHadronEnergyFraction()
-                isCentralJet          and Jet_br.neEmEF[iEvent][iOff] >= 0.90, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
-                isCentralJet          and (Jet_br.chMultiplicity[iEvent][iOff] + Jet_br.neMultiplicity[iEvent][iOff]) <= 1, # jet_data->cMult.push_back(it->chargedMultiplicity()); jet_data->nMult.push_back(it->neutralMultiplicity());
-                isCentralJet          and Jet_br.muEF[iEvent][iOff]   >= 0.80, # jet_data->mef.push_back(it->muonEnergyFraction());
-                isCentralJet          and Jet_br.chHEF[iEvent][iOff]  <= 0.01, # jet_data->chef.push_back(it->chargedHadronEnergyFraction());
-                isCentralJet          and Jet_br.chMultiplicity[iEvent][iOff] == 0, # jet_data->cMult.push_back(it->chargedMultiplicity());
-                isCentralJet          and Jet_br.chEmEF[iEvent][iOff] >= 0.80, # jet_data->cemef.push_back(it->chargedEmEnergyFraction());
+                        
+        #         if RefJetEtaAbs < 2.5:
+        #             for iTT in range(TT_br_toUse.nTower):
+        #                 sIEta = str(abs(TT_br_toUse.ieta[iTT]))
+        #                 hist8['TT_iet_RefJetEtalt2p5'][src][sIEta].Fill(TT_br_toUse.iet[iTT])
 
-                isForwardCentralJet_1 and Jet_br.neHEF[iEvent][iOff]  >= 0.90, # neutralHadronEnergyFraction()
-                isForwardCentralJet_1 and Jet_br.neEmEF[iEvent][iOff] >= 0.99, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
-                isForwardCentralJet_1 and Jet_br.muEF[iEvent][iOff]   >= 0.80, # jet_data->mef.push_back(it->muonEnergyFraction());
-                isForwardCentralJet_1 and Jet_br.chEmEF[iEvent][iOff] >= 0.80, # jet_data->cemef.push_back(it->chargedEmEnergyFraction());
+        #             for iTP in range(TP_br_toUse.nECALTP):
+        #                 sIEta = str(abs(TP_br_toUse.ecalTPieta[iTP]))
+        #                 hist8['ECALTP_et_RefJetEtalt2p5'    ][src][sIEta].Fill(TP_br_toUse.ecalTPet[iTP])
+        #                 hist8['ECALTP_compEt_RefJetEtalt2p5'][src][sIEta].Fill(TP_br_toUse.ecalTPcompEt[iTP])
 
-                isForwardCentralJet_2 and Jet_br.neEmEF[iEvent][iOff] >= 0.99, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());                             
+        #             for iTP in range(TP_br_toUse.nHCALTP):
+        #                 sIEta = str(abs(TP_br_toUse.hcalTPieta[iTP]))
+        #                 hist8['HCALTP_et_RefJetEtalt2p5'    ][src][sIEta].Fill(TP_br_toUse.hcalTPet[iTP])
+        #                 hist8['HCALTP_compEt_RefJetEtalt2p5'][src][sIEta].Fill(TP_br_toUse.hcalTPcompEt[iTP])
 
-                ##isForwardJet          and Jet_br.nhef[iOff]  <= 0.20, # neutralHadronEnergyFraction()
-                isForwardJet          and Jet_br.neEmEF[iEvent][iOff] >= 0.40, # jet_data->nemef.push_back(it->neutralEmEnergyFraction());
-                isForwardJet          and Jet_br.neMultiplicity[iEvent][iOff] <= 2, # jet_data->nMult.push_back(it->neutralMultiplicity());
-            ]
-            # print(reject_if)
+        #         if PrintLevel >= 0:
+        #             if RefJetEtaAbs > 2.5 and RefJetEtaAbs < 3.1  and TT28Abv125:
+        #                 print(f"RefJet: pt {vOff.Pt()}, eta {vOff.Eta()}, phi {vOff.Phi()}.   {src}, {nEmuTTs = }, {nEmuTCs = }, {nEmuETPs = }, {nEmuHTPs = } ")
+        #                 for iTT in range(TT_br_toUse.nTower):
+        #                     #if abs(TT_br_toUse.ieta[iTT]) not in [27, 28]: continue
+        #                     print(f"    TT {iTT}: iet {TT_br_toUse.iet[iTT]},  ieta {TT_br_toUse.ieta[iTT]}, iphi {TT_br_toUse.iphi[iTT]},  iem {TT_br_toUse.iem[iTT]}, ihad {TT_br_toUse.ihad[iTT]}, iqual {TT_br_toUse.iqual[iTT]}")
+        #                 print(" ")
 
-        if any(reject_if):
-            selectPFJet = False
+        #                 for iTC in range(TC_br_toUse.nCluster):
+        #                     #if abs(TC_br_toUse.ieta[iTC]) not in [27, 28]: continue
+        #                     print(f"    TC {iTC}: iet {TC_br_toUse.iet[iTC]}, ieta {TC_br_toUse.ieta[iTC]}, iphi {TC_br_toUse.iphi[iTC]},")
+        #                 print(" ")
+                                
+        #                 for iTP in range(TP_br_toUse.nECALTP):
+        #                     #if abs(TP_br_toUse.ecalTPieta[iTP]) not in [27, 28]: continue
+        #                     print(f"   TPECAL {iTP}: ecalTPet {TP_br_toUse.ecalTPet[iTP]}, ecalTPcompEt {TP_br_toUse.ecalTPcompEt[iTP]}, ecalTPieta {TP_br_toUse.ecalTPieta[iTP]} , ecalTPiphi {TP_br_toUse.ecalTPiphi[iTP]}, ecalTPCaliphi {TP_br_toUse.ecalTPCaliphi[iTP]} ")
+        #                 print(" ")
+                            
+        #                 for iTP in range(TP_br_toUse.nHCALTP):
+        #                     #if abs(TP_br_toUse.hcalTPieta[iTP]) not in [27, 28]: continue
+        #                     print(f"   TPHCAL {iTP}: hcalTPet {TP_br_toUse.hcalTPet[iTP]}, hcalTPcompEt {TP_br_toUse.hcalTPcompEt[iTP]}, hcalTPieta {TP_br_toUse.hcalTPieta[iTP]}, hcalTPiphi {TP_br_toUse.hcalTPiphi[iTP]}, hcalTPCaliphi {TP_br_toUse.hcalTPCaliphi[iTP]}")
 
-        if not selectPFJet: continue
-
-        hRefJet_pt_0_2.Fill(et_RefJets[iOff])
-        hRefJet_eta_0_2.Fill(eta_RefJets[iOff])
-        hRefJet_phi_0_2.Fill(phi_RefJets[iOff])     
-
-
-        passingJetMuOverlap = False
-        dR_OffJet_OffMu_min = 99999.0
-        idx_OffMu_nearestToOffJet = -1
-        nOffMuons= Muon_br.nMuons[iEvent]
-        nOffEles= Ele_br.nElectrons[iEvent]
-        for iMu in range(nOffMuons):
-            # muon selection
-            # if not Muon_br.isMediumMuon[iEvent][iMu]: continue
-            if not Muon_br.mediumId[iEvent][iMu]: continue
-            
-            vOffMu = R.TLorentzVector()
-            vOffMu.SetPtEtaPhiM(Muon_br.pt[iEvent][iMu], Muon_br.eta[iEvent][iMu], Muon_br.phi[iEvent][iMu], MASS_MUON)
-
-            # MASS_ELECTRON
-            dr_tmp = vOff.DeltaR(vOffMu)
-            if dr_tmp < dR_OffJet_OffMu_min:
-                dR_OffJet_OffMu_min = dr_tmp
-                idx_OffMu_nearestToOffJet = iMu
-
-            if dr_tmp < DR_Jet_Ele_Min and Muon_br.pt[iEvent][iMu] / vOff.Pt() > RATIO_PtEle_PtJet_Max:
-                passingJetMuOverlap = True
-                
-
-        if idx_OffMu_nearestToOffJet != -1:
-            pTFraction_tmp = Muon_br.pt[iEvent][idx_OffMu_nearestToOffJet] / vOff.Pt()
-            hdR_OffJet_OffMu_min.Fill(dR_OffJet_OffMu_min)
-            hdR_OffJet_OffMu_min_vs_vOffMuPtByvOffJetPt.Fill(dR_OffJet_OffMu_min, pTFraction_tmp)
-            if pTFraction_tmp < 0.5:
-                hdR_OffJet_OffMu_min_forPtFracLt0p5.Fill(dR_OffJet_OffMu_min)
-            
-            
-        # OfflineJet check with OfflineElectron for overlap ---------------------------------------
-        passingJetEleOverlap = False
-        dR_OffJet_OffEle_min = 99999.0
-        idx_OffEle_nearestToOffJet = -1
-        for iEle in range(nOffEles):
-            # electron selection
-            # if not Ele_br.isMediumElectron[iEvent][iEle]: continue
-            
-            vOffEle = R.TLorentzVector()
-            vOffEle.SetPtEtaPhiM(Ele_br.pt[iEvent][iEle], Ele_br.eta[iEvent][iEle], Ele_br.phi[iEvent][iEle], MASS_ELECTRON)
-
-            # MASS_ELECTRON
-            dr_tmp = vOff.DeltaR(vOffEle)
-            if dr_tmp < dR_OffJet_OffEle_min:
-                dR_OffJet_OffEle_min = dr_tmp
-                idx_OffEle_nearestToOffJet = iEle
-
-            if dr_tmp < DR_Jet_Ele_Min and Ele_br.pt[iEvent][iEle] / vOff.Pt() > RATIO_PtEle_PtJet_Max:
-                passingJetEleOverlap = True
-
-
-        if idx_OffEle_nearestToOffJet != -1:
-            pTFraction_tmp = Ele_br.pt[iEvent][idx_OffEle_nearestToOffJet] / vOff.Pt()
-            hdR_OffJet_OffEle_min.Fill(dR_OffJet_OffEle_min)
-            hdR_OffJet_OffEle_min_vs_vOffElePtByvOffJetPt.Fill(dR_OffJet_OffEle_min, pTFraction_tmp)
-            if pTFraction_tmp < 0.5:
-                hdR_OffJet_OffEle_min_forPtFracLt0p5.Fill(dR_OffJet_OffEle_min)
-
-
-        if passingJetMuOverlap: continue
-
-        hStat.Fill(7)
-
-        hRefJet_pt_0_3.Fill(et_RefJets[iOff])
-        hRefJet_eta_0_3.Fill(eta_RefJets[iOff])
-        hRefJet_phi_0_3.Fill(phi_RefJets[iOff])                
-
-        if passingJetEleOverlap: continue
-
-        hStat.Fill(8)
-
-        hRefJet_pt_0_4.Fill(et_RefJets[iOff])
-        hRefJet_eta_0_4.Fill(eta_RefJets[iOff])
-        hRefJet_phi_0_4.Fill(phi_RefJets[iOff])
-
-        # if l1MatchGen:
-        #     off_vec_matchedTo_gen_vec = R.TLorentzVector()
-        #     off_vec_matchedTo_gen_vec.SetPtEtaPhiM(0, 0, 0, 0)
-        #     for iOff in range(nOffJets):
-        #         iOff_vec = R.TLorentzVector()
-        #         iOff_vec.SetPtEtaPhiM(Jet_br.pt[iEvent][iOff], Jet_br.eta[iEvent][iOff], Jet_br.phi[iEvent][iOff], 0)
-        #         if vOff.DeltaR(iOff_vec) < DR_MAX and iOff_vec.Pt() > off_vec_matchedTo_gen_vec.Pt():
-        #             off_vec_matchedTo_gen_vec = iOff_vec
+                            
+        # # -----------------------------------------------------------------------------------------------------------------------------
+        
 
         hRefJet_pt_1.Fill(vOff.Pt())
         hRefJet_eta_1.Fill(vOff.Eta())
         hRefJet_phi_1.Fill(vOff.Phi())
 
         isFirstRefJet= True
-        nEmuJets  = int(Emu_br.nJets[iEvent])
         if isFirstRefJet:
             isFirstRefJet = False
             nEmuJets_Bx0 = 0
@@ -1655,16 +1940,16 @@ for iEvent in range(Ntot):
         sjetIEtaAbs_offlineJet = "%d" % (int(jetIEtaAbs_offlineJet))
         #if sjetIEta_offlineJet in hist_PFJetPt_iEtawise:
         #    hist_PFJetPt_iEtawise[sjetIEta_offlineJet].Fill(vOff.Pt(), puWeight )
-        nEmuTTs   = int(eTT_br.nTower[iEvent])
+
+
         data_dict = OrderedDict()
         #if VERBOSE and iEvt % PRT_EVT is 0: print '  * Run %d, LS %d, event %d, nVtx %d' % (int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event), int(nVtx))
-        # data_dict['runNumber']                = int(Evt_br.run[iEvent])
-        # data_dict['lumiSectionNumber']        = int(Evt_br.lumi[iEvent])
-        # data_dict['eventNumber']              = int(Evt_br.event[iEvent])
-        # data_dict['nVertexReco']              = int(nVtx)
+        data_dict['runNumber']                = int(Evt_br.run[iEvent])
+        data_dict['lumiSectionNumber']        = int(Evt_br.lumi[iEvent])
+        data_dict['eventNumber']              = int(Evt_br.event[iEvent])
+        data_dict['nVertexReco']              = int(nVtx)
         # data_dict['nTT_Unpacked']             = nUnpTTs
         data_dict['nTT_Emulated']             = nEmuTTs
-        l1MatchOffline= True
         if   l1MatchOffline:
             data_dict['PFJetEtCorr']          = vOff.Pt()
         # elif l1MatchGen:
@@ -1672,7 +1957,10 @@ for iEvent in range(Ntot):
         #     data_dict['nVertexGen']           = int(Gen_br.nVtx)
         #     data_dict['nMeanPUGen']           = int(Gen_br.nMeanPU)
         #     data_dict['matchedPFJetEtCorr']   = off_vec_matc
-
+    
+        if runMode not in ['CalCalibSF', 'makeInputForML'] and vOff.Pt() < PT_MIN: continue
+    
+        hStat.Fill(10)
 
         PFJetEtaCat = 'None'
         for iCat in ETA_CAT.keys():
@@ -1696,6 +1984,8 @@ for iEvent in range(Ntot):
         
         if VERBOSE or PrintLevel >= 1:
             print("    offlineJet: eta: {}, phi: {}, etCorr: {}".format(eta_RefJets[iOff], phi_RefJets[iOff], et_RefJets[iOff]))
+    
+        hStat.Fill(11)
 
         max_pt = {}
         vMax   = {}
@@ -1773,6 +2063,18 @@ for iEvent in range(Ntot):
                         hist['jet_dR'] [algo]['HBEF'     ][iPFJetPtCat][src][iEvent].Fill( (vMax[src][algo].DeltaR(vOff)), puWeight )
 
             ## End loop: for algo in ['PUS','noPUS','Raw','RawPUS']
+        hStat.Fill(14)
+
+        if not JetClustByHand:
+            continue
+
+        if VERBOSE or PrintLevel >= 1:
+            sTmp = "matchedEmuIdx: "
+            for src in ['unp','emu']:
+                for algo in ['PUS','noPUS','Raw','RawPUS']:
+                    sTmp += "  %s_%s %d" % (src,algo,matchedEmuIdx[src][algo])
+            print("        {}".format(sTmp))
+
         src= 'emu'
         l1jet_br = Emu_br
         l1TC_br  = eTC_br
@@ -1817,11 +2119,13 @@ for iEvent in range(Ntot):
             
             continue 
 
+        hStat.Fill(32)
         hRefJet_pt_2p02.Fill(vOff.Pt())
         hRefJet_eta_2p02.Fill(vOff.Eta())
         hRefJet_phi_2p02.Fill(vOff.Phi()) 
 
-        isMatchToUnp = False
+        if not isMC and src == 'emu':
+            isMatchToUnp = False
         # Unpacked L1T jets in L1TNuples have jetEt information stored and not rawEt,  puEt etc, hence they can not be used for JEC derivation.
         # So for JEC derivation, use L1T emulated jets with the same jetEt, jetEta and jetPhi as of the unpacked L1T jet
         # Don't apply it when emulating with diffent layer 1 SF as that was used during data taking
@@ -1840,13 +2144,18 @@ for iEvent in range(Ntot):
 
         # if not isMatchToUnp and MatchEmulatedJetsWithUnpacked : continue
 
-        # jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(2*l1jet_br.eta[iEvent][l1jet_idx])
-        # jetHwPt_tmp    = (l1jet_br.rawEt[l1jet_idx] - l1jet_br.puEt[iEvent][l1jet_idx])
-        # jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
-        # jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
-        # jetPtBin_tmp   = hJEC_iEta_vs_Pt.GetYaxis().FindBin(jetPt_tmp)
-        # JEC_tmp            =  float(2*l1jet_br.pt[iEvent][l1jet_idx]) / float(jetHwPt_tmp)
-        # hJEC_iEta_vs_Pt.SetBinContent(jetIEtaBin_tmp, jetPtBin_tmp, JEC_tmp)
+        hRefJet_pt_2p03.Fill(vOff.Pt())
+        hRefJet_eta_2p03.Fill(vOff.Eta())
+        hRefJet_phi_2p03.Fill(vOff.Phi())
+
+
+        jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br.hwEta[iEvent][l1jet_idx])         #revisit
+        jetHwPt_tmp    = (l1jet_br.rawEt[iEvent][l1jet_idx] - l1jet_br.puEt[iEvent][l1jet_idx])
+        jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
+        jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
+        jetPtBin_tmp   = hJEC_iEta_vs_Pt.GetYaxis().FindBin(jetPt_tmp)
+        JEC_tmp            =  float(2*l1jet_br.pt[iEvent][l1jet_idx]) / float(jetHwPt_tmp)
+        hJEC_iEta_vs_Pt.SetBinContent(jetIEtaBin_tmp, jetPtBin_tmp, JEC_tmp)
 
 
         if l1jet_br.pt[iEvent][l1jet_idx] > PT_MAX_L1Jet: continue
@@ -2173,20 +2482,20 @@ for iEvent in range(Ntot):
                 if jetShape == '9x9':
                     data_dict['L1Jet%s_PUEt_ChunkyDonut' % (jetShape)]   = PUet_ChunkyDonut 
                 
-            # if jetShape == 'Default' and ((Raw_TT_iET_tmp - PUet_tmp) < 0.):
-            # #if jetShape == 'Default':
-            #     #if PrintLevel >= 1:
-            #     #print "".format(jEvt,)
-            #     if jetShape == 'Default' and ((Raw_TT_iET_tmp - PUet_tmp) < 0.):
-            #         print("\t\t\t (L1JetDefault_RawEtPUS < 0.) for default jet \t\t\t *** ATTENTION *** ")
-            #     print("         Event: {} ({}:{}:{}), nVtx {}, {}: Raw_TT_iET_tmp {}, PUet_tmp {}, (Raw_TT_iET_tmp - PUet_tmp) {},  jetEtPUS_L1JetDefault {}, jetIEta {}, jetIPhi {},  PFjePt {}".format(jEvt, \
-            #         int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event), int(nVtx), \
-            #         src, Raw_TT_iET_tmp,PUet_tmp,(Raw_TT_iET_tmp - PUet_tmp), jetEtPUS_L1JetDefault, jetIEta,jetIPhi, vOff.Pt() ) )
-                # print("           l1jet_idx {}: jetEt {}, jetEta {}, jetPhi {}, jetIEt {}, jetIEta {}, jetIPhi {},  jetBx {}, jetTowerIPhi {}, jetTowerIEta {}, rawEt/2 {}, jetSeedEt {},  puEt/2 {}, jetPUDonutEt0 {}, jetPUDonutEt1 {}, jetPUDonutEt2 {}, jetPUDonutEt3 {}\n".format(l1jet_idx, \
-                #     l1jet_br.pt[iEvent][l1jet_idx], l1jet_br.eta[iEvent][l1jet_idx], l1jet_br.phi[l1jet_idx], l1jet_br.jetIEt[l1jet_idx], l1jet_br.jetIEta[l1jet_idx], l1jet_br.jetIPhi[l1jet_idx], \
-                #     l1jet_br.jetBx[l1jet_idx], l1jet_br.jetTowerIPhi[l1jet_idx], l1jet_br.jetTowerIEta[l1jet_idx], l1jet_br.rawEt[l1jet_idx]/2., l1jet_br.jetSeedEt[l1jet_idx], \
-                #     l1jet_br.puEt[l1jet_idx]/2., l1jet_br.jetPUDonutEt0[l1jet_idx], l1jet_br.jetPUDonutEt1[l1jet_idx], l1jet_br.jetPUDonutEt2[l1jet_idx], l1jet_br.jetPUDonutEt3[l1jet_idx]
-                # ) )
+            if jetShape == 'Default' and ((Raw_TT_iET_tmp - PUet_tmp) < 0.):
+            #if jetShape == 'Default':
+                #if PrintLevel >= 1:
+                #print "".format(jEvt,)
+                if jetShape == 'Default' and ((Raw_TT_iET_tmp - PUet_tmp) < 0.):
+                    print("\t\t\t (L1JetDefault_RawEtPUS < 0.) for default jet \t\t\t *** ATTENTION *** ")
+                print("         Event: {} ({}:{}:{}), nVtx {}, {}: Raw_TT_iET_tmp {}, PUet_tmp {}, (Raw_TT_iET_tmp - PUet_tmp) {},  jetEtPUS_L1JetDefault {}, jetIEta {}, jetIPhi {},  PFjePt {}".format(jEvt, \
+                    int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent]), int(Evt_br.event[iEvent]), int(nVtx), \
+                    src, Raw_TT_iET_tmp,PUet_tmp,(Raw_TT_iET_tmp - PUet_tmp), jetEtPUS_L1JetDefault, jetIEta,jetIPhi, vOff.Pt() ) )
+                print("           l1jet_idx {}: jetEt {}, jetEta {}, jetPhi {}, jetIEt {}, jetIEta {}, jetIPhi {},  jetBx {}, jetTowerIPhi {}, jetTowerIEta {}, rawEt/2 {}, jetSeedEt {},  puEt/2 {}, jetPUDonutEt0 {}, jetPUDonutEt1 {}, jetPUDonutEt2 {}, jetPUDonutEt3 {}\n".format(l1jet_idx, \
+                    l1jet_br.pt[iEvent][l1jet_idx], l1jet_br.eta[iEvent][l1jet_idx], l1jet_br.phi[iEvent][l1jet_idx], l1jet_br.pt[iEvent][l1jet_idx], l1jet_br.eta[l1jet_idx], l1jet_br.phi[iEvent][l1jet_idx], \
+                    l1jet_br.bx[iEvent][l1jet_idx], l1jet_br.towerIPhi[iEvent][l1jet_idx], l1jet_br.towerIEta[iEvent][l1jet_idx], l1jet_br.rawEt[iEvent][l1jet_idx]/2., l1jet_br.seedEt[iEvent][l1jet_idx], \
+                    l1jet_br.puEt[iEvent][l1jet_idx]/2., l1jet_br.jetpuDonutEt0[iEvent][l1jet_idx], l1jet_br.puDonutEt1[iEvent][l1jet_idx], l1jet_br.puDonutEt2[iEvent][l1jet_idx], l1jet_br.puDonutEt3[iEvent][l1jet_idx]
+                ) )
             
 
             l1jet_pt_JetShapeAndAlgoWise[jetShape] = {}    
@@ -2339,7 +2648,7 @@ for iEvent in range(Ntot):
                         hist2['jet_byHand_den%s' % (jetShape1)][algo1]['HBEF'        ][jPt][src][iEvent].Fill( vOff.Pt() )
 
                     # if 'jet_byHand_eff_den_vs_PU' in dists3:    
-                    #     hist3['jet_byHand_eff_den_vs_PU%s' % (jetShape1)][algo1][sEtaCat_PFJet][jPt][src][iEvent].Fill( vOff.Pt(), nVtx, puWeight )
+                    #     hist3['jet_byHand_eff_den_vs_PU%s' % (jetShape1)][algo1][sEtaCat_PFJet][jPt][src][iEvent].Fill( vOff.Pt(), nVtx, puWeight )       #revisit
                     #     hist3['jet_byHand_eff_den_vs_PU%s' % (jetShape1)][algo1]['HBEF'       ][jPt][src][iEvent].Fill( vOff.Pt(), nVtx, puWeight )
                     
                     if l1jet_pt > PT_CAT[jPt][1]:
@@ -2392,9 +2701,9 @@ for iEvent in range(Ntot):
                     hist2['jet_byHand_res_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ]['PtAllBins'][src][iEvent].Fill(jetIEta_toUse, nVtx, res, puWeight)
                 '''
                 
-                # if 'jet_byHand_res_vs_iEta_vs_nVtx' in dists2:
-                    # hist2['jet_byHand_res_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ][iPFJetPtCat][src][iEvent].Fill(jetIEta_toUse, nVtx, res, puWeight)
-                    # hist2['jet_byHand_res_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ]['PtAllBins'][src][iEvent].Fill(jetIEta_toUse, nVtx, res, puWeight)
+                # if 'jet_byHand_res_vs_iEta_vs_nVtx' in dists2:        #revisit
+                #     hist2['jet_byHand_res_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ][iPFJetPtCat][src][iEvent].Fill(jetIEta_toUse, nVtx, res, puWeight)
+                #     hist2['jet_byHand_res_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ]['PtAllBins'][src][iEvent].Fill(jetIEta_toUse, nVtx, res, puWeight)
                 # if 'jet_byHand_res_woLayer2Calib_vs_iEta_vs_nVtx' in dists2:
                 #     hist2['jet_byHand_res_woLayer2Calib_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ][iPFJetPtCat][src][iEvent].Fill(jetIEta_toUse, nVtx, res_woLayer2Calib, puWeight)
                 #     hist2['jet_byHand_res_woLayer2Calib_vs_iEta_vs_nVtx%s' % (jetShape1)][algo1]['HBEF'        ]['PtAllBins'][src][iEvent].Fill(jetIEta_toUse, nVtx, res_woLayer2Calib, puWeight)
@@ -2415,9 +2724,10 @@ for iEvent in range(Ntot):
             print("WriteInputForML: data_dict: {}".format(data_dict))
 
 
-    # if sFInEventsToRun and hCaloTowers_iEta_vs_iPhi and hCaloTTs_iEta_vs_iPhi:
-    # hCaloTowers_iEta_vs_iPhi_list.append( hCaloTowers_iEta_vs_iPhi )
-    # hCaloTTs_iEta_vs_iPhi_list.append( hCaloTTs_iEta_vs_iPhi ) 
+    # end loop: for iOff in range(nOffJets):
+    if sFInEventsToRun and hCaloTowers_iEta_vs_iPhi and hCaloTTs_iEta_vs_iPhi:
+        hCaloTowers_iEta_vs_iPhi_list.append( hCaloTowers_iEta_vs_iPhi )
+        hCaloTTs_iEta_vs_iPhi_list.append( hCaloTTs_iEta_vs_iPhi ) 
     # ## End loop: for iOff in range(nOffJets):
 
 
@@ -2476,9 +2786,9 @@ for iEvent in range(Ntot):
                     for jetBin in range(jetRate_bins[0]):
                         pT_thrsh = jetRate_bins[1] + (jetBin * jetRate_binWidth)
                         if l1JetPt_toConsider <= pT_thrsh: continue
-                        if 'jet_byHand_rates_trippleJet' in dists4:
-                            hist4['jet_byHand_rates_trippleJet%s' % (jetShape1)][algo1][l1JetIEtaCat_toConsider][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
-                            hist4['jet_byHand_rates_trippleJet%s' % (jetShape1)][algo1]['HBEF'                 ][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
+                        # if 'jet_byHand_rates_trippleJet' in dists4:       #revisit
+                        #     hist4['jet_byHand_rates_trippleJet%s' % (jetShape1)][algo1][l1JetIEtaCat_toConsider][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
+                        #     hist4['jet_byHand_rates_trippleJet%s' % (jetShape1)][algo1]['HBEF'                 ][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
                     
                     if len(l1JetsInEvent_sortedByL1JPt) <= 3: continue
                     # 4th leading jet
@@ -2487,15 +2797,374 @@ for iEvent in range(Ntot):
                     for jetBin in range(jetRate_bins[0]):
                         pT_thrsh = jetRate_bins[1] + (jetBin * jetRate_binWidth)
                         if l1JetPt_toConsider <= pT_thrsh: continue
-                        if 'jet_byHand_rates_quadJet' in dists4:
-                            hist4['jet_byHand_rates_quadJet%s' % (jetShape1)][algo1][l1JetIEtaCat_toConsider][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
-                            hist4['jet_byHand_rates_quadJet%s' % (jetShape1)][algo1]['HBEF'                 ][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
+                        # if 'jet_byHand_rates_quadJet' in dists4:      #revisit
+                        #     hist4['jet_byHand_rates_quadJet%s' % (jetShape1)][algo1][l1JetIEtaCat_toConsider][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
+                        #     hist4['jet_byHand_rates_quadJet%s' % (jetShape1)][algo1]['HBEF'                 ][src][iEvent].Fill( pT_thrsh, nVtx, puWeight )
         ###  trigger rates plots per event level --------------------------------------------------------                
 
 
         ## End loop: for jEvt in range(chains['Unp'][iEvent].GetEntries()):
 
-    # print("\n\n nTotalEvents_byChains[iEvent {}]: {} ".format(iEvent, nTotalEvents_byChains[iEvent]))
-    # hnTotalEvents.SetBinContent(iEvent+1, nTotalEvents_byChains[iEvent])
+    print("\n\n nTotalEvents_byChains[iEvent {}]: {} ".format(0, nTotalEvents_byChains[0]))
+    hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
     # ## End loop: for iEvent in range(len(chains['Unp'])):
+
+print('\nFinished loop over Events')
+if runMode in ['makeInputForML']: 
+    fOut_MLInputs.close()
+
+out_file = R.TFile(out_file_str,'recreate')
+out_file.cd()
+
+colors = [R.kGray, R.kViolet, R.kBlue, R.kCyan+3, R.kTeal, R.kSpring, R.kRed, R.kOrange, R.kMagenta+3, R.kMagenta]
+while len(colors) < len(in_file_names):
+    colors += colors
+
+if usePUReweighting:
+    dir1 = out_file.mkdir("PUWeights")
+    dir1.cd()
+    hPUWt.Write();
+    hnVtxData.Write();
+    hnVtxMC.Write();
+    hnVtxMCWtd.Write();
+
+out_file.cd()
+hnVtx.Write();
+hnVtx_ReWtd.Write();
+hnTotalEvents.Write();
+
+
+'''
+hist_L1Jet_unp_TowerIEta_vs_IEta.Write()
+hist_L1Jet_emu_TowerIEta_vs_IEta.Write()
+hist_L1Jet_unp_TowerIPhi_vs_IPhi.Write()
+hist_L1Jet_emu_TowerIPhi_vs_IPhi.Write()
+
+for iEta in ETA_Bins:
+    hist_PFJetPt_iEtawise[iEta].Write()
+
+for src in ['unp','emu']:    
+    for iEta in ETA_Bins:
+        hist_nPV_vs_L1JetDefaultRAW_SF[src][iEta].Write()
+        hist_nPV_vs_L1JetDefaultPUS_SF[src][iEta].Write()
+'''
+
+if   l1MatchOffline:
+    hdR_OffJet_OffMu_min.Write();
+    hdR_OffJet_OffEle_min.Write();
+    hdR_OffJet_OffMu_min_vs_vOffMuPtByvOffJetPt.Write();
+    hdR_OffJet_OffEle_min_vs_vOffElePtByvOffJetPt.Write();
+    hdR_OffJet_OffMu_min_forPtFracLt0p5.Write();
+    hdR_OffJet_OffEle_min_forPtFracLt0p5.Write();
+
+    for src in ['emu']:
+        hdR_OffJet_L1Jet[src].Write();
+    
+
+hRefJet_pt_0.Write();
+hRefJet_eta_0.Write();
+hRefJet_phi_0.Write(); #
+hRefJet_pt_0_1.Write();
+hRefJet_eta_0_1.Write();
+hRefJet_phi_0_1.Write(); #
+for idx_ in range( nJetFilters + 1 ):
+    hRefJet_pt_0_1_test[idx_].Write()
+    hRefJet_eta_0_1_test[idx_].Write()
+    hRefJet_phi_0_1_test[idx_].Write()
+hRefJet_pt_0_2.Write();
+hRefJet_eta_0_2.Write();
+hRefJet_phi_0_2.Write(); #   
+hRefJet_pt_0_3.Write();
+hRefJet_eta_0_3.Write();
+hRefJet_phi_0_3.Write(); #
+hRefJet_pt_0_4.Write();
+hRefJet_eta_0_4.Write();
+hRefJet_phi_0_4.Write(); #    
+hRefJet_pt_1.Write();
+hRefJet_eta_1.Write();
+hRefJet_phi_1.Write(); #
+hRefJet_pt_2.Write();
+hRefJet_eta_2.Write();
+hRefJet_phi_2.Write(); #
+hRefJet_pt_2p01.Write();
+hRefJet_eta_2p01.Write();
+hRefJet_phi_2p01.Write(); #
+hRefJet_pt_2p02.Write();
+hRefJet_eta_2p02.Write();
+hRefJet_phi_2p02.Write(); #
+hRefJet_pt_2p03.Write();
+hRefJet_eta_2p03.Write();
+hRefJet_phi_2p03.Write(); #
+
+hL1JetUnp_Pt_0.Write()
+hL1JetUnp_Eta_0.Write()
+hL1JetUnp_Phi_0.Write() #
+hL1JetEmu_Pt_0.Write()
+hL1JetEmu_Eta_0.Write()
+hL1JetEmu_Phi_0.Write() #
+hOfflineJet_Pt_0.Write()
+hOfflineJet_Eta_0.Write()
+hOfflineJet_Phi_0.Write() #
+
+hL1JetUnp_Pt_1.Write()
+hL1JetUnp_Eta_1.Write()
+hL1JetUnp_Phi_1.Write() #
+hL1JetEmu_Pt_1.Write()
+hL1JetEmu_Eta_1.Write()
+hL1JetEmu_Phi_1.Write() #
+hL1JetUnp_Pt_2.Write()
+hL1JetUnp_Eta_2.Write()
+hL1JetUnp_Phi_2.Write() #
+hL1JetEmu_Pt_2.Write()
+hL1JetEmu_Eta_2.Write()
+hL1JetEmu_Phi_2.Write() #        
+
+## Loop over all histograms
+if runMode not in ['CalCalibSF', 'CalibJetByHand', 'makeInputForML'] and len(hist) > 0:
+    out_file.cd()
+    for algo in ['PUS','noPUS','Raw','RawPUS']:
+        for iEta in ETA_CAT.keys():
+            for iPt in PT_CAT.keys():
+                for src in ['unp','emu']:
+                    for iTP in range(len(in_file_names)):
+
+                        hist['jet_eff'][algo][iEta][iPt][src][iTP] = R.TEfficiency( hist['jet_num'][algo][iEta][iPt][src][iTP],
+                                                                                    hist['jet_den'][algo][iEta][iPt][src][iTP] )
+                        hist['jet_eff'][algo][iEta][iPt][src][iTP].SetName( hist['jet_num'][algo][iEta][iPt][src][iTP].GetName().replace('num','eff') )
+
+                        for dist in dists:
+
+                            hist[dist][algo][iEta][iPt][src][iTP].SetLineWidth(2)
+                            if src == 'unp': hist[dist][algo][iEta][iPt][src][iTP].SetLineColor(R.kBlack)
+                            if src == 'emu': hist[dist][algo][iEta][iPt][src][iTP].SetLineColor(colors[iTP])
+                            hist[dist][algo][iEta][iPt][src][iTP].Write()
+
+                        ## End loop: for dist in dists+['jet_eff']
+                    ## End loop: for iTP in range(len(in_file_names))
+                ## End loop: for src in ['unp','emu']
+            ## End loop: for iPt in PT_CAT.keys()
+        ## End loop: for iEta in ETA_CAT.keys()
+    ## End loop: for algo in ['PUS','noPUS','Raw','RawPUS']
+    
+if runMode not in ['CalCalibSF', 'CalibJetByHand', 'makeInputForML'] and len(hist1) > 0:
+    out_file.cd()
+    for dist in dists1:
+        for iEta in ETA_Bins:
+            for src in ['emu']:
+                for iTP in range(len(in_file_names)):
+                    hist1[dist][iEta][src][iTP].SetLineWidth(2)
+                    if src == 'unp': hist1[dist][iEta][src][iTP].SetLineColor(R.kBlack)
+                    if src == 'emu': hist1[dist][iEta][src][iTP].SetLineColor(colors[iTP])
+                    hist1[dist][iEta][src][iTP].Write()
+
+
+## Loop over all histograms
+# hist2
+#if runMode not in ['CalibJetByHand', 'makeInputForML']:
+if runMode not in ['makeInputForML']:
+    out_file.cd()        
+    for algo in PUSAlgosAll: # ['Raw', 'RawPUS', 'RawPUS_phiRingMin4', 'RawPUS_phiRingSide4', 'RawPUS_phiRingAdjacent']: # ['PUS','noPUS','Raw','RawPUS']:        
+        for iEta in ETA_Bins:
+            for iPt in list(PT_CAT.keys()) + ['PtAllBins']:
+                for src in ['emu']: #['unp','emu']:
+                    for iTP in range(len(in_file_names)):
+                        #for jetShape in ['Default'] + JetShapes:
+                        for jetShape in JetShapes:
+                            if (algo == 'L1JDefault') and (jetShape != 'Default'): continue
+                            if (not l1NtupleChunkyDonut) and (jetShape == 'Default') and (algo == 'RawPUS'):            continue
+                            if (not l1NtuplePhiRing)     and (jetShape == 'Default') and (algo == 'RawPUS_phiDefault'): continue
+
+                            # JetShape = "" plots are with the first version of code for 9x9 jets
+                            jetShape1 = jetShape
+                            if jetShape == 'Default':  jetShape1 = ""
+                            else:                      jetShape1 = "_%s" % (jetShape)
+                                # JetShape = "" plots are with the first version of code for 9x9 jets                        
+
+                            if 'jet_byHand_eff' in dists2:
+                                hist2['jet_byHand_eff%s' % (jetShape1)][algo][iEta][iPt][src][iTP] = R.TEfficiency( hist2['jet_byHand_num%s' % (jetShape1)][algo][iEta][iPt][src][iTP],
+                                                                                                    hist2['jet_byHand_den%s' % (jetShape1)][algo][iEta][iPt][src][iTP] )
+                                hist2['jet_byHand_eff%s' % (jetShape1)][algo][iEta][iPt][src][iTP].SetName( hist2['jet_byHand_num%s' % (jetShape1)][algo][iEta][iPt][src][iTP].GetName().replace('num','eff') )
+
+                            for dist_1 in dists2:
+                                dist = '%s%s' % (dist_1, jetShape1)
+                                if '_vs_iEta' in dist and iEta != 'HBEF': continue
+                                if dist_1 in ['jet_byHand_L1JetPt_vs_DefaultL1JetPt'] and algo != 'RawPUS': continue
+                                if dist_1 in ['jet_byHand_L1JetPt_vs_PFJetPt', 'jet_byHand_L1JetPt_vs_DefaultL1JetPt'] and iPt != 'PtAllBins': continue
+                                if dist_1 in ['jet_byHand_L1JetPt_vs_DefaultL1JetPt'] and jetShape != 'Default': continue
+
+                                hist2[dist][algo][iEta][iPt][src][iTP].SetLineWidth(2)
+                                if src == 'unp': hist2[dist][algo][iEta][iPt][src][iTP].SetLineColor(R.kBlack)
+                                if src == 'emu': hist2[dist][algo][iEta][iPt][src][iTP].SetLineColor(colors[iTP])
+                                hist2[dist][algo][iEta][iPt][src][iTP].Write()
+
+
+
+if runMode in ['CalibJetByHand']:
+    # hist3
+    out_file.cd()        
+    for algo in PUSAlgosAll + PUSAlgosAllType2: # ['Raw', 'RawPUS', 'RawPUS_phiRingMin4', 'RawPUS_phiRingSide4', 'RawPUS_phiRingAdjacent']: # ['PUS','noPUS','Raw','RawPUS']:
+        for iEta in ETA_CAT.keys():
+            for iPt in PT_CAT.keys():
+                for src in ['emu']: #['unp','emu']:
+                    for iTP in range(len(in_file_names)):
+                        #for jetShape in ['Default'] + JetShapes:
+                        for jetShape in JetShapes + JetShapesType2:
+                            # read proper jetShape and PUSAlgo conbination
+                            if (jetShape in JetShapes      and algo not in PUSAlgosAll) or \
+                                (jetShape in JetShapesType2 and algo not in PUSAlgosAllType2 ):
+                                continue
+            
+                            if (algo == 'L1JDefault') and (jetShape != 'Default'): continue
+
+                            # JetShape = "" plots are with the first version of code for 9x9 jets
+                            jetShape1 = jetShape
+                            if jetShape == 'Default':  jetShape1 = ""
+                            else:                      jetShape1 = "_%s" % (jetShape)
+                                # JetShape = "" plots are with the first version of code for 9x9 jets   
+
+                            for dist_1 in dists3:
+                                dist = '%s%s' % (dist_1, jetShape1)
+
+                                hist3[dist][algo][iEta][iPt][src][iTP].SetLineWidth(2)
+                                if src == 'unp': hist3[dist][algo][iEta][iPt][src][iTP].SetLineColor(R.kBlack)
+                                if src == 'emu': hist3[dist][algo][iEta][iPt][src][iTP].SetLineColor(colors[iTP])
+                                hist3[dist][algo][iEta][iPt][src][iTP].Write()
+
+    # hist4
+    out_file.cd()        
+    for algo in PUSAlgosAll + PUSAlgosAllType2: # ['Raw', 'RawPUS', 'RawPUS_phiRingMin4', 'RawPUS_phiRingSide4', 'RawPUS_phiRingAdjacent']: # ['PUS','noPUS','Raw','RawPUS']:
+        for iEta in ETA_CAT.keys():
+            for src in ['emu']: #['unp','emu']:
+                for iTP in range(len(in_file_names)):
+                    #for jetShape in ['Default'] + JetShapes:
+                    for jetShape in JetShapes + JetShapesType2:
+                        # read proper jetShape and PUSAlgo conbination
+                        if (jetShape in JetShapes      and algo not in PUSAlgosAll) or \
+                            (jetShape in JetShapesType2 and algo not in PUSAlgosAllType2 ):
+                            continue
+                        
+                        if (algo == 'L1JDefault') and (jetShape != 'Default'): continue
+                        
+                        # JetShape = "" plots are with the first version of code for 9x9 jets
+                        jetShape1 = jetShape
+                        if jetShape == 'Default':  jetShape1 = ""
+                        else:                      jetShape1 = "_%s" % (jetShape)
+                            # JetShape = "" plots are with the first version of code for 9x9 jets   
+
+                        for dist_1 in dists4:
+                            dist = '%s%s' % (dist_1, jetShape1)
+
+                            hist4[dist][algo][iEta][src][iTP].SetLineWidth(2)
+                            if src == 'unp': hist4[dist][algo][iEta][src][iTP].SetLineColor(R.kBlack)
+                            if src == 'emu': hist4[dist][algo][iEta][src][iTP].SetLineColor(colors[iTP])
+                            hist4[dist][algo][iEta][src][iTP].Write()
+
+
+# JetShapesType2, PUSAlgosAllType2
+# hist5
+if runMode not in ['makeInputForML']:
+    out_file.cd()
+    hStat.Fill(50)
+    
+    for iEta in ETA_CAT.keys():
+        for iPt in list(PT_CAT.keys()) + ['PtAllBins']:
+            for src in ['emu']: # ['unp', 'emu']:
+                for iTP in range(len(in_file_names)):
+                    for jetShape in JetShapesType2:
+                        jetShape1 = "_%s" % (jetShape)      
+                        
+                        for algo in PUSAlgosAllType2: # ['Et', 'RawEt']
+                        
+                            for dist_1 in dists5:
+                                dist = '%s%s' % (dist_1, jetShape1)
+                                
+
+                                if dist_1 in ['jet_byHand_res_vs_iEta_vs_nVtx'] and \
+                                    iEta != 'HBEF':
+                                    continue
+
+                                #print "dist5 {} algo {}, iEta {}', iPt {}, src {}, iTP {}".format(dist, algo,iEta, iPt,src,iTP)
+                                hist5[dist][algo][iEta][iPt][src][iTP].Write()
+
+
+# hist5
+if runMode not in ['makeInputForML']:
+    out_file.cd()
+
+    for src in ['unp','emu']:
+        for iTP in range(len(in_file_names)):
+            for dist in dists6:
+                
+                hist6[dist][src][iTP].Write()
+
+
+
+# hist7
+if runMode in ['']:
+    out_file.cd()
+
+    for src in ['emu']: # ['unp','emu']:
+        for iTP in range(len(in_file_names)):
+            for dist in dists7:
+                
+                hists7[dist][src][iTP].Write()
+
+
+
+
+if runMode in ['trbshtPhiRingPUS']:
+    out_file.cd()
+    outDir1 = out_file.mkdir( "caloTTs" )
+    outDir1.cd()
+    
+    if len(hCaloTowers_iEta_vs_iPhi_list) != len(hCaloTTs_iEta_vs_iPhi_list):
+        print("len(hCaloTowers_iEta_vs_iPhi_list) != len(hCaloTTs_iEta_vs_iPhi_list):: something went wrong \t\t\t **** ERROR ****")
+    else:
+        for iH in range(len(hCaloTowers_iEta_vs_iPhi_list)):
+            hCaloTowers_iEta_vs_iPhi_list[iH].Write()
+            hCaloTTs_iEta_vs_iPhi_list[iH].Write()
+            
+
+if runMode in ['trbshtPhiRingPUS']:
+    out_file.cd()
+    outDir1 = out_file.mkdir( "caloTTs_1" )
+    outDir1.cd()
+
+    hTTEtMax_forL1JetPUEt0.Write()
+    hL1JetRawEt_vs_L1JetEt_forL1JetPUEt0.Write()
+    
+
+# hist8
+if runMode in ['', 'makeInputForML']:
+    out_file.cd()
+    outDir1 = out_file.mkdir( "L1JetPt" )
+    outDir1.cd()
+
+    for src in ['emu']:
+        for iEta in ETA_Bins:
+            for dist in dists8:
+                hist8[dist][src][iEta].Write()
+
+    
+
+out_file.cd()
+hStat.Write()
+
+hnVts_vs_nTT_unp.Write()
+hnVts_vs_nTT_emu.Write()
+
+hJEC_iEta_vs_Pt.Write()
+
+out_file.Close()
+
+#print '\nWrote out file:  plots/'+out_file_str+'.root'
+print('\nWrote out file:  '+out_file_str)
+
+
+print("selectedEvents_list: {}".format(selectedEvents_list))
+if sFOutSelectedEvents and len(selectedEvents_list) > 0: 
+    with open(sFOutSelectedEvents, 'w') as fOutSelectedEvents:
+        for evt in selectedEvents_list:
+            fOutSelectedEvents.write( '%s\n' % evt )
+
 
