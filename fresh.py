@@ -68,7 +68,11 @@ dataErasRunRange = {
     '2024B': [378981, 379391],
     '2024C': [379415, 380238],
     '2024D': [380255, 380947],
-    '2024E': [380949, 389999],
+    '2024E': [380949, 386753],
+    # '2024F': [380949, 389999],
+    # '2024G': [380949, 389999],
+    # '2024H': [380949, 389999],
+    '2024I': [386753, 389999],
     
 }
 
@@ -175,9 +179,9 @@ PU_CUT = 'nVtxMin_45'  ## Pileup selection
 ERA    = '2018AB'      ## Era, e.g. 2018AB or 2018D
 
 PT_CAT = {}
-#PT_CAT['lowPt'] = [30,  60,   60]  ## Low pT, turn-on threshold, high pT
-#PT_CAT['medPt'] = [60,  75,   90]  ## Low pT, turn-on threshold, high pT   #[60,  90,   90]
-#PT_CAT['hiPt']  = [90, 120, 9999]  ## Low pT, turn-on threshold, high pT
+PT_CAT['lowPt'] = [30,  60,   60]  ## Low pT, turn-on threshold, high pT
+PT_CAT['medPt'] = [60,  75,   90]  ## Low pT, turn-on threshold, high pT   #[60,  90,   90]
+PT_CAT['hiPt']  = [90, 120, 9999]  ## Low pT, turn-on threshold, high pT
 #PT_CAT['modPt'] = [60,  75,   90]  ## Low pT, turn-on threshold, high pT
 ## for lowpt jet between 25 to 35 GeV
 #PT_CAT['Below25Pt'] = [0,  15,   25]  ## Low pT, turn-on threshold, high pT
@@ -525,7 +529,7 @@ class unp_br:
                 attr_name = full_name.split("L1Jet_")[1]  # Extract name after "Muon_"
                 setattr(self, attr_name, array)
 # Extract branches dynamically after defining the class
-file_name = "Nano.root"  # Specify the actual ROOT file name here
+file_name = "customL1toNANO_RAW2DIGI_L1Reco_RECO_PAT_NANO.root"  # Specify the actual ROOT file name here
 with uproot.open(file_name) as file:
     # Access the tree (replace 'your_tree_name' with the actual tree name in your ROOT file)
     tree = file["Events"]
@@ -1495,7 +1499,7 @@ nTotalEvents_byChains = []
 
 
 Ntot=len(Jet_br.pt)
-
+# print(f"Total events: {Ntot}")  
 
 l1MatchGen= False
 nTotalEvents_byChains=[]
@@ -1513,15 +1517,15 @@ for iEvent in range(Ntot):
     eta_RefJets=Jet_br.eta[iEvent]
     phi_RefJets=Jet_br.phi[iEvent]
 
-
+    # print("Event: %d, NJets: %d" % (iEvent, NJets))
 
     nTotalEvents_byChains[0] += 1
     hStat.Fill(0)
 
-    if not isMC and len(GoldenJSONForData_list) > 0:
-        if not passGoldenJSON(goldenJSON, int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent])):
-            #print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event))); sys.stdout.flush();
-            continue
+    # if not isMC and len(GoldenJSONForData_list) > 0:
+    #     if not passGoldenJSON(goldenJSON, int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent])):
+    #         #print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event))); sys.stdout.flush();
+    #         continue
 
     dataEra = ''
     if not isMC:
@@ -1529,6 +1533,8 @@ for iEvent in range(Ntot):
             if int(Evt_br.run[iEvent]) >= eraRunRange_[0] and int(Evt_br.run[iEvent]) <= eraRunRange_[1]:
                 dataEra = Era_
                 break
+    
+    # print("dataEra: %s" % (dataEra))
 
     hStat.Fill(1)
 
@@ -1642,14 +1648,14 @@ for iEvent in range(Ntot):
                 hist8['TT_iet_nRefJetsEq1'][src][sIEta].Fill(TT_br_toUse.iet[iEvent][iTT])
 
             for iTP in range(TP_br_e_toUse.nECALTP[iEvent]):
-                sIEta = str(abs(TP_br_e_toUse.ieta[iTP]))
-                hist8['ECALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_e_toUse.ecalTPet[iEvent][iTP])
-                hist8['ECALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_e_toUse.ecalTPcompEt[iEvent][iTP])
+                sIEta = str(abs(TP_br_e_toUse.ieta[iEvent][iTP]))
+                hist8['ECALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_e_toUse.et[iEvent][iTP])
+                hist8['ECALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_e_toUse.compEt[iEvent][iTP])
 
             for iTP in range(TP_br_h_toUse.nHCALTP[iEvent]):
                 sIEta = str(abs(TP_br_h_toUse.ieta[iEvent][iTP]))
-                hist8['HCALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_h_toUse.hcalTPet[iEvent][iTP])
-                hist8['HCALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_h_toUse.hcalTPcompEt[iEvent][iTP])
+                hist8['HCALTP_et_nRefJetsEq1'    ][src][sIEta].Fill(TP_br_h_toUse.et[iEvent][iTP])
+                hist8['HCALTP_compEt_nRefJetsEq1'][src][sIEta].Fill(TP_br_h_toUse.compEt[iEvent][iTP])
             
 
 
@@ -1756,7 +1762,7 @@ for iEvent in range(Ntot):
             if dataEra in [
                 '2022F', '2022G', 
                 '2023B', '2023C', '2023D', 
-                '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H' ]:
+                '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H', '2024I' ]:
                 # https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#Recommendations_for_the_13_6_AN1
                 # https://github.com/bundocka/cmssw/blob/7d536e034f7dd0773eec3f306508c80c67fb1960/L1Trigger/L1TNtuples/plugins/L1JetRecoTreeProducer.cc#L689-L715
 
@@ -2968,7 +2974,7 @@ for src in ['unp','emu']:
         hist_nPV_vs_L1JetDefaultRAW_SF[src][iEta].Write()
         hist_nPV_vs_L1JetDefaultPUS_SF[src][iEta].Write()
 '''
-
+l1MatchOffline = True
 if   l1MatchOffline:
     hdR_OffJet_OffMu_min.Write();
     hdR_OffJet_OffEle_min.Write();
