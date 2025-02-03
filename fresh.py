@@ -696,7 +696,7 @@ def run():
     if runMode in ['makePUHisto']:
         print("Running with runMode = makePUHisto \n")
         
-        
+    # GoldenJSON -----------------------------------------------------------------------------
     goldenJSON = None
     #if type(GoldenJSONForData_list)
     if isinstance(GoldenJSONForData_list, list) and len(GoldenJSONForData_list) > 0 and (not isMC):
@@ -715,11 +715,17 @@ def run():
             else: goldenJSON |= goldenJSON_tmp # append dict
             fGoldenJSON_.close()
 
-    #     print(f"GoldenJSONForData_list: {GoldenJSONForData_list}")
+        print(f"GoldenJSONForData_list: {GoldenJSONForData_list}")
+        if PrintLevel >= 0:
+            print(f"goldenJSON: {goldenJSON}")
 
-
-    in_file_names= "N"
-
+    ###################
+    ### Book histograms
+    ###################
+    if PrintLevel >= 1:
+        print("Booking hitograms")
+    hDummy = R.TH1D("hDummy","",1,0,1)
+    hDummy.SetDefaultSumw2()
 
     pt_bins  = [20,    0, 200]
     ptHigh_bins  = [200,    0, 1000]
@@ -1589,10 +1595,18 @@ def run():
         nTotalEvents_byChains[0] += 1
         hStat.Fill(0)
 
+        #Analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28 ----
+        # if isMC and useCutGenNVtxEq0:
+        #     if Gen_br.nVtx > 0: continue
+        # ----------------------------------------------------------------------------------------------------------
+            
+
+    
         # if not isMC and len(GoldenJSONForData_list) > 0:
         #     if not passGoldenJSON(goldenJSON, int(Evt_br.run[iEvent]), int(Evt_br.lumi[iEvent])):
         #         #print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br.run), int(Evt_br.lumi), int(Evt_br.event))); sys.stdout.flush();
         #         continue
+
 
         dataEra = ''
         if not isMC:
@@ -1658,8 +1672,18 @@ def run():
             eta_RefJets  = Gen_br.jetEta[iEvent]
             phi_RefJets  = Gen_br.jetPhi[iEvent]
 
-        
+        hnVts_vs_nTT_unp.Fill(nVtx, nUnpTTs)
         hnVts_vs_nTT_emu.Fill(nVtx, nEmuTTs)
+
+        nUnpJets_Bx0 = 0
+        for iJ in range(nUnpJets): 
+            if Unp_br.bx[iEvent][iJ] != 0: continue   
+            nUnpJets_Bx0 += 1        
+            hL1JetUnp_Pt_0.Fill(Unp_br.pt[iEvent][iJ])
+            hL1JetUnp_Eta_0.Fill(Unp_br.eta[iEvent][iJ])
+            hL1JetUnp_Phi_0.Fill(Unp_br.phi[iEvent][iJ])
+        hnL1JetUnp_0.Fill(nUnpJets_Bx0)
+
         nEmuJets_Bx0 = 0
         for iJ in range(nEmuJets):
             if Emu_br.bx[iEvent][iJ] != 0: continue
@@ -1753,6 +1777,33 @@ def run():
 
         # hStat.Fill(2)
 
+        # Mimic trigger conditions in offline objects ---------------------------------------------------------------------------------
+        if not isMC and len(HLT_Triggers_Required) > 0:
+            nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
+            if PrintLevel >= 3:
+                print(f"nOffMuons_passingTrigThsh_0: {nOffMuons_passingTrigThsh}")
+            for iMu in range(nOffMuons):
+                if not Muon_br.tightId[iEvent][iMu]: continue
+
+                for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+                    if Muon_br.pt[iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
+                        nOffMuons_passingTrigThsh[iTrigThsh] += 1
+
+            passingTrigThshs = True
+            for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+                if nOffMuons_passingTrigThsh[iTrigThsh] == 0:
+                    passingTrigThshs = False
+                    break
+                
+            if PrintLevel >= 3:
+                print(f"nOffMuons_passingTrigThsh: {nOffMuons_passingTrigThsh},   passingTrigThshs: {passingTrigThshs}")
+
+            if not passingTrigThshs: continue
+
+            hStat.Fill(3)
+        
+        # -----------------------------------------------------------------------------------------------------------------------------
+
         ### save l1jets reconstructed with different JetShape+PUS for single/double/tripple/qud-jet trigger rates ---------------------
 
         l1JetCollection = OrderedDict()
@@ -1798,7 +1849,6 @@ def run():
                     break
 
         isFirstRefJet = True
-
         for iOff in range(NJets):
 
             hStat.Fill(4)
@@ -1868,7 +1918,7 @@ def run():
                 hRefJet_eta_0_2.Fill(eta_RefJets[iOff])
                 hRefJet_phi_0_2.Fill(phi_RefJets[iOff])     
 
-
+                # OfflineJet check with OfflineMuon for overlap ---------------------------------------
                 passingJetMuOverlap = False
                 dR_OffJet_OffMu_min = 99999.0
                 idx_OffMu_nearestToOffJet = -1
@@ -2050,9 +2100,18 @@ def run():
             hRefJet_eta_1.Fill(vOff.Eta())
             hRefJet_phi_1.Fill(vOff.Phi())
 
-            isFirstRefJet= True
             if isFirstRefJet:
                 isFirstRefJet = False
+
+                nUnpJets_Bx0 = 0
+                for iJ in range(nUnpJets): 
+                    if Unp_br.bx[iEvent][iJ] != 0: continue   
+                    nUnpJets_Bx0 += 1        
+                    hL1JetUnp_Pt_1.Fill(Unp_br.pt[iEvent][iJ])
+                    hL1JetUnp_Eta_1.Fill(Unp_br.eta[iEvent][iJ])
+                    hL1JetUnp_Phi_1.Fill(Unp_br.phi[iEvent][iJ])
+                hnL1JetUnp_1.Fill(nUnpJets_Bx0)
+
                 nEmuJets_Bx0 = 0
                 for iJ in range(nEmuJets):
                     if Emu_br.bx[iEvent][iJ] != 0: continue
@@ -2062,7 +2121,22 @@ def run():
                     hL1JetEmu_Phi_1.Fill(Emu_br.phi[iEvent][iJ])
                 hnL1JetEmu_1.Fill(nEmuJets_Bx0)
 
-            
+            # plot pT, eta, phi of L1JetUnp jet matched to RefJet 
+            idxL1Jet_matchedRefJet = -1
+            L1JetPt_matchedRefJet = 0
+            for iJ in range(nUnpJets): 
+                if Unp_br.bx[iEvent][iJ] != 0: continue 
+                vL1Jet_ = R.TLorentzVector()
+                vL1Jet_.SetPtEtaPhiM(Unp_br.pt[iEvent][iJ], Unp_br.eta[iEvent][iJ], Unp_br.phi[iEvent][iJ], 0) 
+                if vL1Jet_.DeltaR(vOff) < DR_MAX and vL1Jet_.Pt() > L1JetPt_matchedRefJet:
+                    idxL1Jet_matchedRefJet = iJ
+                    L1JetPt_matchedRefJet = vL1Jet_.Pt()
+            if idxL1Jet_matchedRefJet >= 0:
+                hL1JetUnp_Pt_2.Fill(Unp_br.pt[iEvent][idxL1Jet_matchedRefJet])
+                hL1JetUnp_Eta_2.Fill(Unp_br.eta[iEvent][idxL1Jet_matchedRefJet])
+                hL1JetUnp_Phi_2.Fill(Unp_br.phi[iEvent][idxL1Jet_matchedRefJet])                                            
+
+            # plot pT, eta, phi of L1JetEmu jet matched to RefJet 
             idxL1Jet_matchedRefJet = -1
             L1JetPt_matchedRefJet = 0
             for iJ in range(nEmuJets): 
@@ -2141,7 +2215,37 @@ def run():
                     max_pt[src][algo] = -99
                     vMax  [src][algo] = R.TLorentzVector()
                     matchedEmuIdx[src][algo] = -1
+            ## Loop over all L1T unpacked jets
+            if PrintLevel >= 12:
+                print("  * UnpJets ({}):: ".format(nUnpJets))
+            for iUnp in range(nUnpJets):
 
+                if Unp_br.bx[iEvent][iUnp] != 0: continue  ## Use only jets in BX 0
+                
+                hStat.Fill(12)
+
+                vUnp = {}
+                for algo in ['PUS','noPUS','Raw','RawPUS']:
+                    vUnp[algo] = R.TLorentzVector()  ## Create a 4-vector of the L1T jet
+
+                vUnp['PUS']   .SetPtEtaPhiM(Unp_br.pt[iEvent][iUnp],                           Unp_br.eta[iEvent][iUnp], Unp_br.phi[iEvent][iUnp], 0)
+                vUnp['noPUS'] .SetPtEtaPhiM(Unp_br.pt[iEvent][iUnp]    + Unp_br.puEt[iEvent][iUnp], Unp_br.pt[iEvent][iUnp], Unp_br.phi[iEvent][iUnp], 0)
+                vUnp['Raw']   .SetPtEtaPhiM(Unp_br.rawEt[iEvent][iUnp],                        Unp_br.eta[iEvent][iUnp], Unp_br.phi[iEvent][iUnp], 0)
+                vUnp['RawPUS'].SetPtEtaPhiM(Unp_br.rawEt[iEvent][iUnp] - Unp_br.puEt[iEvent][iUnp], Unp_br.eta[iEvent][iUnp], Unp_br.phi[iEvent][iUnp], 0)
+
+                for algo in ['PUS','noPUS','Raw','RawPUS']:
+                    if vUnp[algo].DeltaR(vOff) < DR_MAX and vUnp[algo].Pt() > max_pt['unp'][algo]:
+                        max_pt['unp'][algo] = vUnp[algo].Pt()
+                        vMax  ['unp'][algo] = vUnp[algo]
+                        matchedEmuIdx['unp'][algo] = iUnp
+                
+                #hist_L1Jet_unp_TowerIEta_vs_IEta.Fill(Unp_br.jetTowerIEta[iUnp], Unp_br.jetIEta[iUnp])
+                #hist_L1Jet_unp_TowerIPhi_vs_IPhi.Fill(Unp_br.jetTowerIPhi[iUnp], Unp_br.jetIPhi[iUnp]) 
+                         
+                
+            ## End loop: for iUnp in range(nUnpJets)
+
+            ## Loop over all L1T emulated jets
             for iEmu in range(nEmuJets):
                 if Emu_br.bx[iEvent][iEmu] != 0: continue  ## Use only jets in BX 0
 
@@ -2164,7 +2268,8 @@ def run():
 
                 #hist_L1Jet_emu_TowerIEta_vs_IEta.Fill(Emu_br.jetTowerIEta[iEvent][iEmu], Emu_br.jetIEta[iEvent][iEmu])
                 #hist_L1Jet_emu_TowerIPhi_vs_IPhi.Fill(Emu_br.jetTowerIPhi[iEvent][iEmu], Emu_br.jetIPhi[iEvent][iEmu])
-
+        
+            ## Re-set the |eta| categories based on emulated and unpacked L1T jet eta, if there is a match
             etaCat = {}
             for src in ['unp','emu']:
                 etaCat[src] = {}
@@ -2208,28 +2313,28 @@ def run():
                 ## End loop: for algo in ['PUS','noPUS','Raw','RawPUS']
             hStat.Fill(14)
 
-            # for src in []: # ['unp','emu']: not necessary now
+            # for src in ['unp','emu']: 
             #     l1TP_br = None
             #     if src == 'unp':
             #         l1TP_br = uTP_br
             #     elif src == 'emu':
             #         l1TP_br = eTP_br                               
 
-            #     if PrintLevel >= 8:
-            #         print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
-            #         for iTP in range(l1TP_br.nECALTP):
-            #             print(" {} ecalTPieta {}".format( iTP, l1TP_br.ecalTPieta[iTP]))
-            #             print(" {} ecalTPiphi {}".format( iTP, l1TP_br.ecalTPiphi[iTP]))
-            #             print(" {} ecalTPiCaliphi {}".format( iTP, l1TP_br.ecalTPCaliphi[iTP]))
-            #             print(" {} ecalTPet {}".format( iTP, l1TP_br.ecalTPet[iTP]))
-            #             print(" {} ecalTPcompEt {}".format( iTP, l1TP_br.ecalTPcompEt[iTP]))
-            #             print(" {} ecalTPfineGrain {}".format( iTP, l1TP_br.ecalTPfineGrain[iTP]))
+            #     # if PrintLevel >= 8:
+            #     #     print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
+            #     #     for iTP in range(l1TP_br.nECALTP):
+            #     #         print(" {} ecalTPieta {}".format( iTP, l1TP_br.ecalTPieta[iTP]))
+            #     #         print(" {} ecalTPiphi {}".format( iTP, l1TP_br.ecalTPiphi[iTP]))
+            #     #         print(" {} ecalTPiCaliphi {}".format( iTP, l1TP_br.ecalTPCaliphi[iTP]))
+            #     #         print(" {} ecalTPet {}".format( iTP, l1TP_br.ecalTPet[iTP]))
+            #     #         print(" {} ecalTPcompEt {}".format( iTP, l1TP_br.ecalTPcompEt[iTP]))
+            #     #         print(" {} ecalTPfineGrain {}".format( iTP, l1TP_br.ecalTPfineGrain[iTP]))
                         
-            #             print("{} {}: ecalTPieta {}, ecalTPiphi {}, ecalTPCaliphi {}, ecalTPet {}, ecalTPcompEt {}, ecalTPfineGrain {}".format(" "*6, iTP, l1TP_br.ecalTPieta[iTP], l1TP_br.ecalTPiphi[iTP], l1TP_br.ecalTPCaliphi[iTP], l1TP_br.ecalTPet[iTP], l1TP_br.ecalTPcompEt[iTP], l1TP_br.ecalTPfineGrain[iTP]))
+            #     #         print("{} {}: ecalTPieta {}, ecalTPiphi {}, ecalTPCaliphi {}, ecalTPet {}, ecalTPcompEt {}, ecalTPfineGrain {}".format(" "*6, iTP, l1TP_br.ecalTPieta[iTP], l1TP_br.ecalTPiphi[iTP], l1TP_br.ecalTPCaliphi[iTP], l1TP_br.ecalTPet[iTP], l1TP_br.ecalTPcompEt[iTP], l1TP_br.ecalTPfineGrain[iTP]))
                     
-            #         print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
-            #         for iTP in range(l1TP_br.nHCALTP):
-            #             print("{} {}: hcalTPieta {}, hcalTPiphi {}, hcalTPCaliphi {}, hcalTPet {}, hcalTPcompEt {}, hcalTPfineGrain {}".format(" "*6, iTP, l1TP_br.hcalTPieta[iTP], l1TP_br.hcalTPiphi[iTP], l1TP_br.hcalTPCaliphi[iTP], l1TP_br.hcalTPet[iTP], l1TP_br.hcalTPcompEt[iTP], l1TP_br.hcalTPfineGrain[iTP]))
+            #     #     print("{} {} HCAL TP ({})".format(" "*4,src, l1TP_br.nECALTP))
+            #     #     for iTP in range(l1TP_br.nHCALTP):
+            #     #         print("{} {}: hcalTPieta {}, hcalTPiphi {}, hcalTPCaliphi {}, hcalTPet {}, hcalTPcompEt {}, hcalTPfineGrain {}".format(" "*6, iTP, l1TP_br.hcalTPieta[iTP], l1TP_br.hcalTPiphi[iTP], l1TP_br.hcalTPCaliphi[iTP], l1TP_br.hcalTPet[iTP], l1TP_br.hcalTPcompEt[iTP], l1TP_br.hcalTPfineGrain[iTP]))
                     
             #     for iTP in range(l1TP_br.nECALTP):
             #         if 'ECAP_TP_et_vs_iEta_vs_nVts' in dists6:
@@ -2322,33 +2427,33 @@ def run():
                 # Unpacked L1T jets in L1TNuples have jetEt information stored and not rawEt,  puEt etc, hence they can not be used for JEC derivation.
                 # So for JEC derivation, use L1T emulated jets with the same jetEt, jetEta and jetPhi as of the unpacked L1T jet
                 # Don't apply it when emulating with diffent layer 1 SF as that was used during data taking
-                # for iUnp in range(nUnpJets):
-                #     if Unp_br.jetBx[iUnp] != 0: continue  ## Use only jets in BX 0
+                for iUnp in range(nUnpJets):
+                    if Unp_br.bx[iEvent][iUnp] != 0: continue  ## Use only jets in BX 0
 
-                #     # Unp_br.jetEt[iUnp], Unp_br.jetEta[iUnp], Unp_br.jetPhi[iUnp]
-                #     # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
-                #     # l1jet_idx
-                #     # l1jet_br
-                #     if  ( (abs(Unp_br.jetEt[iUnp]  - l1jet_br.jetEt[iEvent][l1jet_idx])  < 1e-8) and \
-                #             (abs(Unp_br.jetEta[iUnp] - l1jet_br.jetEta[iEvent][l1jet_idx]) < 1e-8) and \
-                #             (abs(Unp_br.jetPhi[iUnp] - l1jet_br.jetPhi[iEvent][l1jet_idx]) < 1e-8) ):
-                #         isMatchToUnp = True
-                #         break
+                    # Unp_br.jetEt[iUnp], Unp_br.jetEta[iUnp], Unp_br.jetPhi[iUnp]
+                    # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
+                    # l1jet_idx
+                    # l1jet_br
+                    if  ( (abs(Unp_br.pt[iEvent][iUnp]  - l1jet_br.pt[iEvent][iEvent][l1jet_idx])  < 1e-8) and \
+                            (abs(Unp_br.eta[iEvent][iUnp] - l1jet_br.eta[iEvent][iEvent][l1jet_idx]) < 1e-8) and \
+                            (abs(Unp_br.phi[iEvent][iUnp] - l1jet_br.phi[iEvent][iEvent][l1jet_idx]) < 1e-8) ):
+                        isMatchToUnp = True
+                        break
 
-                # if not isMatchToUnp and MatchEmulatedJetsWithUnpacked : continue
+                if not isMatchToUnp and MatchEmulatedJetsWithUnpacked : continue
 
                 hRefJet_pt_2p03.Fill(vOff.Pt())
                 hRefJet_eta_2p03.Fill(vOff.Eta())
                 hRefJet_phi_2p03.Fill(vOff.Phi())
 
-
-                jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br.hwEta[iEvent][l1jet_idx])         #revisit
-                jetHwPt_tmp    = (l1jet_br.rawEt[iEvent][l1jet_idx] - l1jet_br.puEt[iEvent][l1jet_idx])
-                jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
-                jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
-                jetPtBin_tmp   = hJEC_iEta_vs_Pt.GetYaxis().FindBin(jetPt_tmp)
-                JEC_tmp            =  float(2*l1jet_br.pt[iEvent][l1jet_idx]) / float(jetHwPt_tmp)
-                hJEC_iEta_vs_Pt.SetBinContent(jetIEtaBin_tmp, jetPtBin_tmp, JEC_tmp)
+                if src in ['emu']:
+                    jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br.hwEta[iEvent][l1jet_idx])         #revisit
+                    jetHwPt_tmp    = (l1jet_br.rawEt[iEvent][l1jet_idx] - l1jet_br.puEt[iEvent][l1jet_idx])
+                    jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
+                    jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
+                    jetPtBin_tmp   = hJEC_iEta_vs_Pt.GetYaxis().FindBin(jetPt_tmp)
+                    JEC_tmp            =  float(2*l1jet_br.pt[iEvent][l1jet_idx]) / float(jetHwPt_tmp)
+                    hJEC_iEta_vs_Pt.SetBinContent(jetIEtaBin_tmp, jetPtBin_tmp, JEC_tmp)
 
 
                 if l1jet_br.pt[iEvent][l1jet_idx] > PT_MAX_L1Jet: continue
