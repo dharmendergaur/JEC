@@ -395,7 +395,7 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="5k_nano.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="nano.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
@@ -1647,6 +1647,7 @@ def run():
         # nEmuHTPs  = int(eTP_br.nHCALTP[iEvent])
         # nEmuETPs  = int(eTP_br.nECALTP[iEvent])
         nEmuTTs   = int(eTT_br.nTower[iEvent])
+        nUnpTTs   = int(uTT_br.nTower[iEvent])
         # nEmuTCs   = int(eTC_br.nCluster[iEvent])
         # nGenJets  = int(Gen_br.nJet[iEvent])
         l1MatchOffline= True
@@ -2434,9 +2435,9 @@ def run():
                     # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
                     # l1jet_idx
                     # l1jet_br
-                    if  ( (abs(Unp_br.pt[iEvent][iUnp]  - l1jet_br.pt[iEvent][iEvent][l1jet_idx])  < 1e-8) and \
-                            (abs(Unp_br.eta[iEvent][iUnp] - l1jet_br.eta[iEvent][iEvent][l1jet_idx]) < 1e-8) and \
-                            (abs(Unp_br.phi[iEvent][iUnp] - l1jet_br.phi[iEvent][iEvent][l1jet_idx]) < 1e-8) ):
+                    if  ( (abs(Unp_br.pt[iEvent][iUnp]  - l1jet_br.pt[iEvent][l1jet_idx])  < 1e-8) and \
+                            (abs(Unp_br.eta[iEvent][iUnp] - l1jet_br.eta[iEvent][l1jet_idx]) < 1e-8) and \
+                            (abs(Unp_br.phi[iEvent][iUnp] - l1jet_br.phi[iEvent][l1jet_idx]) < 1e-8) ):
                         isMatchToUnp = True
                         break
 
