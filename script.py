@@ -453,13 +453,15 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../combined_nano.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../nano_root/nano_140.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
     parser.add_argument('--PUrangeTag',            type=str, dest='PUrangeTag', help="PU range tag", default='None')
     parser.add_argument('--N_parts',               type=int, dest='N_parts', help="Split i/p l1nanos into N_parts", default='1')
     parser.add_argument('--M_quantilesIpFilesSet', type=int, dest='M_quantilesIpFilesSet', help="Quantile of i/p l1nanos split", default='0')
+    parser.add_argument('--outputname',              type=str, dest='output', required=False, help="output name", default="nano_136")
+
     parseGroup1 = parser.add_mutually_exclusive_group(required=False)
     parseGroup1.add_argument('--l1MatchOffline', action='store_true',default= True)
     parseGroup1.add_argument('--l1MatchGen', action='store_true')
@@ -484,6 +486,7 @@ def run():
     sampleName            = args.sampleName
     offlineCHSJet         = args.offlineCHSJet
     offlinePUPPIJet       = args.offlinePUPPIJet
+    output                = args.output
 
 
     print("Inputs: \n\t file_name/l1nanoPath: {}, \n\t sampleName: {}, \n\t  OOT_PU_scheme: {}, \n\t PUrangeTag: {}, \n\t N_parts: {}, \n\t M_quantilesIpFilesSet: {}, \n\t l1MatchOffline: {}, \n\t l1MatchGen: {}, \n\t l1nanoChunkyDonut: {}, \n\t l1nanoPhiRing: {})".format(
@@ -515,7 +518,7 @@ def run():
     # in_file_names = [ l1nanoPath ]
     in_file_names = "N"
     sL1nano = "l1nanoChunkyDonut" if l1nanoChunkyDonut else "l1nanoPhiRing"
-    out_file_str  = "L1T_HCALL2Calib_stage1_%s_%s_%s_%s.root" % (sampleName, sL1nano, OOT_PU_scheme, PUrangeTag)
+    out_file_str  = "L1Nano_%s_%s_%s_%s_%s.root" % (output, sampleName, sL1nano, OOT_PU_scheme, PUrangeTag)
     if runMode in ['CalCalibSF']:
         out_file_str = out_file_str.replace(".root", "_CalCalibSF.root")
     if runMode in ['CalibJetByHand']:
@@ -1467,7 +1470,6 @@ def run():
     nTotalEvents_byChains=[]
     nTotalEvents_byChains.append(0)
     for iEvent in range(100):
-    # for iEvent in range(500):
 
         l1JetRef_br = None
         nRefJets    = 0
@@ -2099,7 +2101,7 @@ def run():
                                 etaCat[src][algo] = iCat
                     else:       etaCat[src][algo] = PFJetEtaCat
 
-                    if etaCat[src][algo] == 'None':
+                    if etaCat[src][algo] == None:
                         print('\n\nSUPER-BIZZARE JET THAT FALLS INTO NO ETA CATEGORIES!!!  eta[%s][%s] = %.3f\n\n' % (vMax[src][algo].Eta(), src, algo))
                         continue
                     # if etaCat[src][algo] != PFJetEtaCat:
@@ -2905,7 +2907,7 @@ def run():
 
             ## End loop: for jEvt in range(chains['Unp'][iEvent].GetEntries()):
 
-        print("\n\n nTotalEvents_byChains[iEvent {}]: {} ".format(0, nTotalEvents_byChains[0]))
+        print("\n\n iEvent {}: {} ".format(0, nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
 
