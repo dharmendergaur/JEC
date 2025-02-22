@@ -453,7 +453,7 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../nano_root/nano_140.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="Nano.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
@@ -2266,7 +2266,7 @@ def run():
                 hRefJet_phi_2p03.Fill(vOff.Phi())
 
                 if src in ['emu']:
-                    jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br['hwEta'][iEvent][l1jet_idx])         #revisit
+                    jetIEta_tmp    = l1jet_br['towerIEta'][iEvent][l1jet_idx]
                     jetHwPt_tmp    = (l1jet_br['rawEt'][iEvent][l1jet_idx] - l1jet_br['puEt'][iEvent][l1jet_idx])
                     jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
                     jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
@@ -2294,8 +2294,8 @@ def run():
                     jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
                     jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
                 elif src == 'unp':
-                    jetIEta = convert_jetIEta_to_jetTowerIEta( 2*l1jet_br['eta'][iEvent][l1jet_idx])
-                    jetIPhi = convert_jetIPhi_to_jetTowerIPhi( 2*l1jet_br['phi'][iEvent][l1jet_idx] )
+                    jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
+                    jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
                 jetEt       = l1jet_br['pt'][iEvent][l1jet_idx]
                 jetIEtaAbs  = abs(jetIEta)
                 sjetIEta    = str(jetIEta)
