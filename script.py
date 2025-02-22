@@ -1619,27 +1619,39 @@ def run():
                 hOfflineJet_Phi_0.Fill(Jet_br['phi'][iEvent][iJ])                    
         hnOfflineJet_0.Fill(nOffJets)
 
+        #Mimic trigger condition
         if not isMC and len(HLT_Triggers_Required) > 0:
-            nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh_0: {nOffMuons_passingTrigThsh}")
-            for iMu in range(nOffMuons):
-                if not Muon_br['tightId'][iEvent][iMu]: continue
+            passingTrigThshs = True  
+            # Iterate through all triggers in HLT_Triggers_Required
+            for trigger_type in HLT_Triggers_Required:
+                if trigger_type == 'IsoMu24_OneProng32':
+                    nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
+                    for iMu in range(nOffMuons):
+                        if not Muon_br['tightId'][iEvent][iMu]: continue
+                        
+                        for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+                            if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
+                                nOffMuons_passingTrigThsh[iTrigThsh] += 1
 
-                for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                    if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
-                        nOffMuons_passingTrigThsh[iTrigThsh] += 1
+                    if not all(x > 0 for x in nOffMuons_passingTrigThsh):  
+                        passingTrigThshs = False
 
-            passingTrigThshs = True
-            for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                if nOffMuons_passingTrigThsh[iTrigThsh] == 0:
+                elif trigger_type == 'SingleJet180':
+                    nOffJets_passingTrigThsh = [0] * len(TrigThshs_OffJetPt)
+                    for iJet in range(nOffJets):
+                        for iTrigThsh in range(len(TrigThshs_OffJetPt)):
+                            if Jet_br['pt'][iEvent][iJet] > TrigThshs_OffJetPt[iTrigThsh]:
+                                nOffJets_passingTrigThsh[iTrigThsh] += 1
+
+                    if not all(x > 0 for x in nOffJets_passingTrigThsh):  
+                        passingTrigThshs = False
+
+                else:
+                    print(f"HLT_Triggers_Required: {trigger_type} not implemented")
                     passingTrigThshs = False
-                    break
-                
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh: {nOffMuons_passingTrigThsh},   passingTrigThshs: {passingTrigThshs}")
 
-            if not passingTrigThshs: continue
+            if not passingTrigThshs:  # If one trigger fails, exit early
+                break
 
             hStat.Fill(3)
         
