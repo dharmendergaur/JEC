@@ -34,14 +34,12 @@ PUSAlgosSelected = [] #['Raw', 'RawPUS', 'RawPUS_phiDefault']
 PUSAlgosAllType2 = [] # ['Et', 'RawEt']
 MatchEmulatedJetsWithUnpacked = False
 HLT_Triggers_Required = [
-    'IsoMu24_OneProng32' # HLT_IsoMu24_v15
+    'HLT_IsoMu24_v' # HLT_IsoMu24_v15
 ]
-# SingleJet180, IsoMu24_OneProng32
 TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24], for Mu24_Mu20: [24, 20]
-TrigThshs_OffJetPt = [ 180 ] # For e.g. for SingleJet180: [ 180 ], for DiJet180: [180, 180], for Jet180_Jet120: [180, 120]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
-GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"] 
+GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/DCSOnly_JSONS/dailyDCSOnlyJSON/Collisions24_13p6TeV_378981_381544_DCSOnly_TkPx.json"] # ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_eraG_362433_362760_Golden.json"]
 useCutGenNVtxEq0 = False # Set False. Only for troubleshoot perfose. When set True: analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28
 #offlineJetType = 'PUPPI' # 'CHS', 'PUPPI'  offlineCHSJet, offlinePUPPIJet. Set it as a command line argument 
 nJetFilters = 14
@@ -455,13 +453,15 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../combined_nano.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../nano_root/nano_140.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
     parser.add_argument('--PUrangeTag',            type=str, dest='PUrangeTag', help="PU range tag", default='None')
     parser.add_argument('--N_parts',               type=int, dest='N_parts', help="Split i/p l1nanos into N_parts", default='1')
     parser.add_argument('--M_quantilesIpFilesSet', type=int, dest='M_quantilesIpFilesSet', help="Quantile of i/p l1nanos split", default='0')
+    parser.add_argument('--outputname',              type=str, dest='output', required=False, help="output name", default="nano_136")
+
     parseGroup1 = parser.add_mutually_exclusive_group(required=False)
     parseGroup1.add_argument('--l1MatchOffline', action='store_true',default= True)
     parseGroup1.add_argument('--l1MatchGen', action='store_true')
@@ -486,6 +486,7 @@ def run():
     sampleName            = args.sampleName
     offlineCHSJet         = args.offlineCHSJet
     offlinePUPPIJet       = args.offlinePUPPIJet
+    output                = args.output
 
 
     print("Inputs: \n\t file_name/l1nanoPath: {}, \n\t sampleName: {}, \n\t  OOT_PU_scheme: {}, \n\t PUrangeTag: {}, \n\t N_parts: {}, \n\t M_quantilesIpFilesSet: {}, \n\t l1MatchOffline: {}, \n\t l1MatchGen: {}, \n\t l1nanoChunkyDonut: {}, \n\t l1nanoPhiRing: {})".format(
@@ -517,7 +518,7 @@ def run():
     # in_file_names = [ l1nanoPath ]
     in_file_names = "N"
     sL1nano = "l1nanoChunkyDonut" if l1nanoChunkyDonut else "l1nanoPhiRing"
-    out_file_str  = "L1T_HCALL2Calib_stage1_%s_%s_%s_%s.root" % (sampleName, sL1nano, OOT_PU_scheme, PUrangeTag)
+    out_file_str  = "L1Nano_%s_%s_%s_%s_%s.root" % (output, sampleName, sL1nano, OOT_PU_scheme, PUrangeTag)
     if runMode in ['CalCalibSF']:
         out_file_str = out_file_str.replace(".root", "_CalCalibSF.root")
     if runMode in ['CalibJetByHand']:
@@ -1468,7 +1469,7 @@ def run():
     l1MatchGen= False
     nTotalEvents_byChains=[]
     nTotalEvents_byChains.append(0)
-    for iEvent in range(Ntot):
+    for iEvent in range(100):
 
         l1JetRef_br = None
         nRefJets    = 0
@@ -2265,7 +2266,7 @@ def run():
                 hRefJet_phi_2p03.Fill(vOff.Phi())
 
                 if src in ['emu']:
-                    jetIEta_tmp    = l1jet_br['towerIEta'][iEvent][l1jet_idx]
+                    jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br['hwEta'][iEvent][l1jet_idx])         #revisit
                     jetHwPt_tmp    = (l1jet_br['rawEt'][iEvent][l1jet_idx] - l1jet_br['puEt'][iEvent][l1jet_idx])
                     jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
                     jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
@@ -2293,8 +2294,8 @@ def run():
                     jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
                     jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
                 elif src == 'unp':
-                    jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
-                    jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
+                    jetIEta = convert_jetIEta_to_jetTowerIEta( 2*l1jet_br['eta'][iEvent][l1jet_idx])
+                    jetIPhi = convert_jetIPhi_to_jetTowerIPhi( 2*l1jet_br['phi'][iEvent][l1jet_idx] )
                 jetEt       = l1jet_br['pt'][iEvent][l1jet_idx]
                 jetIEtaAbs  = abs(jetIEta)
                 sjetIEta    = str(jetIEta)
@@ -2906,7 +2907,7 @@ def run():
 
             ## End loop: for jEvt in range(chains['Unp'][iEvent].GetEntries()):
 
-        print("\n\n nTotalEvents_byChains[iEvent {}]: {} ".format(0, nTotalEvents_byChains[0]))
+        print("\n\n iEvent {}: {} ".format(0, nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
 
