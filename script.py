@@ -442,7 +442,7 @@ def extract_branches(tree):
             branch_dict["evt"][name] = tree[name].array()
         elif name.startswith("HLT_"):
             branch_dict["hlt"][name] = tree[name].array()
-            
+
     return branch_dict
 
 
@@ -1516,6 +1516,22 @@ def run():
         # print("dataEra: %s" % (dataEra))
 
         hStat.Fill(1)
+        # print(list(HLT_br.keys()))
+        # Apply HLT triggers requirements -------------------------------------------------
+        if not isMC and len(HLT_Triggers_Required) > 0:
+            passHLTTrgs = False
+            # if PrintLevel >= 20:
+            #     print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
+            for HLT_TRG_name_required in HLT_Triggers_Required:
+                if any(HLT_TRG_name_required in name for name in list(HLT_br.keys())):
+                    # print("Passed")
+                    passHLTTrgs = True
+                    break
+
+            if not passHLTTrgs: 
+                continue
+
+        hStat.Fill(2)
 
         
         hCaloTowers_iEta_vs_iPhi = None
