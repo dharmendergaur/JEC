@@ -34,9 +34,11 @@ PUSAlgosSelected = [] #['Raw', 'RawPUS', 'RawPUS_phiDefault']
 PUSAlgosAllType2 = [] # ['Et', 'RawEt']
 MatchEmulatedJetsWithUnpacked = False
 HLT_Triggers_Required = [
-    'HLT_IsoMu24_v' # HLT_IsoMu24_v15
+    'IsoMu24_OneProng32' # HLT_IsoMu24_v15
 ]
+# SingleJet180, IsoMu24_OneProng32
 TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24], for Mu24_Mu20: [24, 20]
+TrigThshs_OffJetPt = [ 180 ] # For e.g. for SingleJet180: [ 180 ], for DiJet180: [180, 180], for Jet180_Jet120: [180, 120]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
 GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
@@ -438,7 +440,9 @@ def extract_branches(tree):
             branch_dict["vtx"][name] = tree[name].array()
         elif name in ["event", "run", "luminosityBlock"]:
             branch_dict["evt"][name] = tree[name].array()
-
+        elif name.startswith("HLT_"):
+            branch_dict["hlt"][name] = tree[name].array()
+            
     return branch_dict
 
 
@@ -512,6 +516,8 @@ def run():
     Unp_br = BranchCollection(branch_data["unp"], "L1Jet_", "nL1Jet")
     Vtx_br = BranchCollection(branch_data["vtx"], "PV_", "PV_npvsGood")
     Evt_br = BranchCollection(branch_data["evt"], "", "")
+    HLT_br = BranchCollection(branch_data["hlt"], "HLT_","")
+
 
     
     
