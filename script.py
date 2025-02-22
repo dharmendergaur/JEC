@@ -39,7 +39,7 @@ HLT_Triggers_Required = [
 TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24], for Mu24_Mu20: [24, 20]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
-GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/DCSOnly_JSONS/dailyDCSOnlyJSON/Collisions24_13p6TeV_378981_381544_DCSOnly_TkPx.json"] # ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_eraG_362433_362760_Golden.json"]
+GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
 useCutGenNVtxEq0 = False # Set False. Only for troubleshoot perfose. When set True: analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28
 #offlineJetType = 'PUPPI' # 'CHS', 'PUPPI'  offlineCHSJet, offlinePUPPIJet. Set it as a command line argument 
 nJetFilters = 14
@@ -1494,10 +1494,10 @@ def run():
             
 
     
-        # if not isMC and len(GoldenJSONForData_list) > 0:
-        #     if not passGoldenJSON(goldenJSON, int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent])):
-        #         #print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run']), int(Evt_br['luminosityBlock']), int(Evt_br['event']))); sys.stdout.flush();
-        #         continue
+        if not isMC and len(GoldenJSONForData_list) > 0:
+            if not passGoldenJSON(goldenJSON, int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent])):
+                # print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run']), int(Evt_br['luminosityBlock']), int(Evt_br['event']))); sys.stdout.flush();
+                continue
 
 
         dataEra = ''
