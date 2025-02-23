@@ -440,8 +440,8 @@ def extract_branches(tree):
             branch_dict["vtx"][name] = tree[name].array()
         elif name in ["event", "run", "luminosityBlock"]:
             branch_dict["evt"][name] = tree[name].array()
-        elif name.startswith("HLT_"):
-            branch_dict["hlt"][name] = tree[name].array()
+        # elif name.startswith("HLT_"):
+        #     branch_dict["hlt"][name] = tree[name].array()
 
     return branch_dict
 
@@ -516,7 +516,7 @@ def run():
     Unp_br = BranchCollection(branch_data["unp"], "L1Jet_", "nL1Jet")
     Vtx_br = BranchCollection(branch_data["vtx"], "PV_", "PV_npvsGood")
     Evt_br = BranchCollection(branch_data["evt"], "", "")
-    HLT_br = BranchCollection(branch_data["hlt"], "HLT_","")
+    # HLT_br = BranchCollection(branch_data["hlt"], "HLT_","")
 
 
     
