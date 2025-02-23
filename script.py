@@ -2944,7 +2944,7 @@ def run():
         print("\n\n iEvent: {} ".format( nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
-
+    print(f"Total Events: {nTot}")
     print('\nFinished loop over Events')
     print(f"Processing completed in {time.time() - start_time:.2f} seconds")
     if runMode in ['makeInputForML']: 
