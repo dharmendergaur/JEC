@@ -1597,29 +1597,29 @@ def run():
                 hOfflineJet_Phi_0.Fill(Jet_br['phi'][iEvent][iJ])                    
         hnOfflineJet_0.Fill(nOffJets)
 
-        if not isMC and len(HLT_Triggers_Required) > 0:
-            nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh_0: {nOffMuons_passingTrigThsh}")
-            for iMu in range(nOffMuons):
-                if not Muon_br['tightId'][iEvent][iMu]: continue
+        # if not isMC and len(HLT_Triggers_Required) > 0:
+        #     nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
+        #     if PrintLevel >= 3:
+        #         print(f"nOffMuons_passingTrigThsh_0: {nOffMuons_passingTrigThsh}")
+        #     for iMu in range(nOffMuons):
+        #         if not Muon_br['tightId'][iEvent][iMu]: continue
 
-                for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                    if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
-                        nOffMuons_passingTrigThsh[iTrigThsh] += 1
+        #         for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+        #             if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
+        #                 nOffMuons_passingTrigThsh[iTrigThsh] += 1
 
-            passingTrigThshs = True
-            for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                if nOffMuons_passingTrigThsh[iTrigThsh] == 0:
-                    passingTrigThshs = False
-                    break
+        #     passingTrigThshs = True
+        #     for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+        #         if nOffMuons_passingTrigThsh[iTrigThsh] == 0:
+        #             passingTrigThshs = False
+        #             break
                 
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh: {nOffMuons_passingTrigThsh},   passingTrigThshs: {passingTrigThshs}")
+        #     if PrintLevel >= 3:
+        #         print(f"nOffMuons_passingTrigThsh: {nOffMuons_passingTrigThsh},   passingTrigThshs: {passingTrigThshs}")
 
-            if not passingTrigThshs: continue
+        #     if not passingTrigThshs: continue
 
-            hStat.Fill(3)
+        #     hStat.Fill(3)
         
         # -----------------------------------------------------------------------------------------------------------------------------
 
