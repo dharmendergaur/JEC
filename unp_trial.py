@@ -34,12 +34,14 @@ PUSAlgosSelected = [] #['Raw', 'RawPUS', 'RawPUS_phiDefault']
 PUSAlgosAllType2 = [] # ['Et', 'RawEt']
 MatchEmulatedJetsWithUnpacked = False
 HLT_Triggers_Required = [
-    'HLT_IsoMu24_v' # HLT_IsoMu24_v15
+    'IsoMu24_OneProng32' # HLT_IsoMu24_v15
 ]
+# SingleJet180, IsoMu24_OneProng32
 TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24], for Mu24_Mu20: [24, 20]
+TrigThshs_OffJetPt = [ 180 ] # For e.g. for SingleJet180: [ 180 ], for DiJet180: [180, 180], for Jet180_Jet120: [180, 120]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
-GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/DCSOnly_JSONS/dailyDCSOnlyJSON/Collisions24_13p6TeV_378981_381544_DCSOnly_TkPx.json"] # ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json"] #["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_eraG_362433_362760_Golden.json"]
+GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
 useCutGenNVtxEq0 = False # Set False. Only for troubleshoot perfose. When set True: analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28
 #offlineJetType = 'PUPPI' # 'CHS', 'PUPPI'  offlineCHSJet, offlinePUPPIJet. Set it as a command line argument 
 nJetFilters = 14
@@ -438,6 +440,8 @@ def extract_branches(tree):
             branch_dict["vtx"][name] = tree[name].array()
         elif name in ["event", "run", "luminosityBlock"]:
             branch_dict["evt"][name] = tree[name].array()
+        # elif name.startswith("HLT_"):
+        #     branch_dict["hlt"][name] = tree[name].array()
 
     return branch_dict
 
@@ -453,14 +457,14 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../nano_root/nano_136.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="nano_root/nano_136.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
     parser.add_argument('--PUrangeTag',            type=str, dest='PUrangeTag', help="PU range tag", default='None')
     parser.add_argument('--N_parts',               type=int, dest='N_parts', help="Split i/p l1nanos into N_parts", default='1')
     parser.add_argument('--M_quantilesIpFilesSet', type=int, dest='M_quantilesIpFilesSet', help="Quantile of i/p l1nanos split", default='0')
-    parser.add_argument('--outputname',              type=str, dest='output', required=False, help="output path", default="nano_136.root")
+    parser.add_argument('--output',              type=str, dest='output', required=False, help="output path", default="nano_136.root")
     parseGroup1 = parser.add_mutually_exclusive_group(required=False)
     parseGroup1.add_argument('--l1MatchOffline', action='store_true',default= True)
     parseGroup1.add_argument('--l1MatchGen', action='store_true')
@@ -512,6 +516,7 @@ def run():
     Unp_br = BranchCollection(branch_data["unp"], "L1Jet_", "nL1Jet")
     Vtx_br = BranchCollection(branch_data["vtx"], "PV_", "PV_npvsGood")
     Evt_br = BranchCollection(branch_data["evt"], "", "")
+    HLT_br = BranchCollection(branch_data["hlt"], "HLT_","")
 
     
     
@@ -1511,7 +1516,23 @@ def run():
 
         hStat.Fill(1)
 
-        
+        # print(list(HLT_br.keys()))
+        # Apply HLT triggers requirements -------------------------------------------------
+        # if not isMC and len(HLT_Triggers_Required) > 0:
+        #     passHLTTrgs = False
+        #     # if PrintLevel >= 20:
+        #     #     print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
+        #     for HLT_TRG_name_required in HLT_Triggers_Required:
+        #         if any(HLT_TRG_name_required in name for name in list(HLT_br.keys())):
+        #             # print("Passed")
+        #             passHLTTrgs = True
+        #             break
+
+        #     if not passHLTTrgs: 
+        #         continue
+
+        hStat.Fill(2)
+
         hCaloTowers_iEta_vs_iPhi = None
         hCaloTTs_iEta_vs_iPhi    = None
 
@@ -1597,33 +1618,46 @@ def run():
                 hOfflineJet_Phi_0.Fill(Jet_br['phi'][iEvent][iJ])                    
         hnOfflineJet_0.Fill(nOffJets)
 
-        if not isMC and len(HLT_Triggers_Required) > 0:
-            nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh_0: {nOffMuons_passingTrigThsh}")
-            for iMu in range(nOffMuons):
-                if not Muon_br['tightId'][iEvent][iMu]: continue
+        #Mimic trigger condition
+        # if not isMC and len(HLT_Triggers_Required) > 0:
+        #     passingTrigThshs = True  
+        #     # Iterate through all triggers in HLT_Triggers_Required
+        #     for trigger_type in HLT_Triggers_Required:
+        #         if trigger_type == 'IsoMu24_OneProng32':
+        #             nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
+        #             for iMu in range(nOffMuons):
+        #                 if not Muon_br['tightId'][iEvent][iMu]: continue
+                        
+        #                 for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+        #                     if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
+        #                         nOffMuons_passingTrigThsh[iTrigThsh] += 1
 
-                for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                    if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
-                        nOffMuons_passingTrigThsh[iTrigThsh] += 1
+        #             if not all(x > 0 for x in nOffMuons_passingTrigThsh):  
+        #                 passingTrigThshs = False
 
-            passingTrigThshs = True
-            for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                if nOffMuons_passingTrigThsh[iTrigThsh] == 0:
-                    passingTrigThshs = False
-                    break
-                
-            if PrintLevel >= 3:
-                print(f"nOffMuons_passingTrigThsh: {nOffMuons_passingTrigThsh},   passingTrigThshs: {passingTrigThshs}")
+        #         elif trigger_type == 'SingleJet180':
+        #             nOffJets_passingTrigThsh = [0] * len(TrigThshs_OffJetPt)
+        #             for iJet in range(nOffJets):
+        #                 for iTrigThsh in range(len(TrigThshs_OffJetPt)):
+        #                     if Jet_br['pt'][iEvent][iJet] > TrigThshs_OffJetPt[iTrigThsh]:
+        #                         nOffJets_passingTrigThsh[iTrigThsh] += 1
 
-            if not passingTrigThshs: continue
+        #             if not all(x > 0 for x in nOffJets_passingTrigThsh):  
+        #                 passingTrigThshs = False
 
-            hStat.Fill(3)
+        #         else:
+        #             print(f"HLT_Triggers_Required: {trigger_type} not implemented")
+        #             passingTrigThshs = False
+
+        #     if not passingTrigThshs:  # If one trigger fails, exit early
+        #         break
+
+        #     hStat.Fill(3)
         
         # -----------------------------------------------------------------------------------------------------------------------------
 
         ### save l1jets reconstructed with different JetShape+PUS for single/double/tripple/qud-jet trigger rates ---------------------
+
 
         l1JetCollection = OrderedDict()
         for src in ['unp','emu']:
@@ -2266,7 +2300,7 @@ def run():
                 hRefJet_phi_2p03.Fill(vOff.Phi())
 
                 if src in ['unp']:
-                    jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br['hwEta'][iEvent][l1jet_idx])         #revisit
+                    jetIEta_tmp    = l1jet_br['towerIEta'][iEvent][l1jet_idx]
                     jetHwPt_tmp    = (l1jet_br['rawEt'][iEvent][l1jet_idx] - l1jet_br['puEt'][iEvent][l1jet_idx])
                     if(l1jet_br['rawEt'][iEvent][l1jet_idx] or l1jet_br['puEt'][iEvent][l1jet_idx] <=0):
                         print("------------------------------Negative or 0 pT ---------------------in Event: ", iEvent)
@@ -2275,6 +2309,9 @@ def run():
                         # print("in Event: ", iEvent)
                     if(jetHwPt_tmp == 0):
                         print ("------------------------------jetHwPt_tmp = 0 ---------------------")
+
+                    if jetHwPt_tmp ==0: continue
+
                     jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
                     jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
                     jetPtBin_tmp   = hJEC_iEta_vs_Pt.GetYaxis().FindBin(jetPt_tmp)
@@ -2301,8 +2338,8 @@ def run():
                     jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
                     jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
                 elif src == 'unp':
-                    jetIEta = convert_jetIEta_to_jetTowerIEta( 2*l1jet_br['eta'][iEvent][l1jet_idx])
-                    jetIPhi = convert_jetIPhi_to_jetTowerIPhi( 2*l1jet_br['phi'][iEvent][l1jet_idx] )
+                    jetIEta = l1jet_br['towerIEta'][iEvent][l1jet_idx]
+                    jetIPhi = l1jet_br['towerIPhi'][iEvent][l1jet_idx]
                 jetEt       = l1jet_br['pt'][iEvent][l1jet_idx]
                 jetIEtaAbs  = abs(jetIEta)
                 sjetIEta    = str(jetIEta)
@@ -2914,11 +2951,12 @@ def run():
 
             ## End loop: for jEvt in range(chains['Unp'][iEvent].GetEntries()):
 
-        print("\n\n nTotalEvents_byChains[iEvent {}]: {} ".format(0, nTotalEvents_byChains[0]))
+        print("\n\n iEvent : {} ".format(nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
 
     print('\nFinished loop over Events')
+    print(f"Total Events: {Ntot}")
     print(f"Processing completed in {time.time() - start_time:.2f} seconds")
     if runMode in ['makeInputForML']: 
         fOut_MLInputs.close()
