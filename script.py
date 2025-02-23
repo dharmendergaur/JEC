@@ -457,7 +457,7 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="Nano.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="root://cms-xrd-global.cern.ch//store/group/dpg_trigger/comm_trigger/L1Trigger/lroberts/JECs2025/JETMET24I/miniaod/baseline/JetMET0/jetMET24I/250221_110431/0000/nano_106.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
@@ -1518,18 +1518,18 @@ def run():
         hStat.Fill(1)
         # print(list(HLT_br.keys()))
         # Apply HLT triggers requirements -------------------------------------------------
-        if not isMC and len(HLT_Triggers_Required) > 0:
-            passHLTTrgs = False
-            # if PrintLevel >= 20:
-            #     print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
-            for HLT_TRG_name_required in HLT_Triggers_Required:
-                if any(HLT_TRG_name_required in name for name in list(HLT_br.keys())):
-                    # print("Passed")
-                    passHLTTrgs = True
-                    break
+        # if not isMC and len(HLT_Triggers_Required) > 0:
+        #     passHLTTrgs = False
+        #     # if PrintLevel >= 20:
+        #     #     print(f"Evt_br.hlt.size(): {Evt_br.hlt.size()}"); sys.stdout.flush();
+        #     for HLT_TRG_name_required in HLT_Triggers_Required:
+        #         if any(HLT_TRG_name_required in name for name in list(HLT_br.keys())):
+        #             # print("Passed")
+        #             passHLTTrgs = True
+        #             break
 
-            if not passHLTTrgs: 
-                continue
+        #     if not passHLTTrgs: 
+        #         continue
 
         hStat.Fill(2)
 
@@ -1620,40 +1620,40 @@ def run():
         hnOfflineJet_0.Fill(nOffJets)
 
         #Mimic trigger condition
-        if not isMC and len(HLT_Triggers_Required) > 0:
-            passingTrigThshs = True  
-            # Iterate through all triggers in HLT_Triggers_Required
-            for trigger_type in HLT_Triggers_Required:
-                if trigger_type == 'IsoMu24_OneProng32':
-                    nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
-                    for iMu in range(nOffMuons):
-                        if not Muon_br['tightId'][iEvent][iMu]: continue
+        # if not isMC and len(HLT_Triggers_Required) > 0:
+        #     passingTrigThshs = True  
+        #     # Iterate through all triggers in HLT_Triggers_Required
+        #     for trigger_type in HLT_Triggers_Required:
+        #         if trigger_type == 'IsoMu24_OneProng32':
+        #             nOffMuons_passingTrigThsh = [0] * len(TrigThshs_OffMuPt)
+        #             for iMu in range(nOffMuons):
+        #                 if not Muon_br['tightId'][iEvent][iMu]: continue
                         
-                        for iTrigThsh in range(len(TrigThshs_OffMuPt)):
-                            if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
-                                nOffMuons_passingTrigThsh[iTrigThsh] += 1
+        #                 for iTrigThsh in range(len(TrigThshs_OffMuPt)):
+        #                     if Muon_br['pt'][iEvent][iMu] > TrigThshs_OffMuPt[iTrigThsh]:
+        #                         nOffMuons_passingTrigThsh[iTrigThsh] += 1
 
-                    if not all(x > 0 for x in nOffMuons_passingTrigThsh):  
-                        passingTrigThshs = False
+        #             if not all(x > 0 for x in nOffMuons_passingTrigThsh):  
+        #                 passingTrigThshs = False
 
-                elif trigger_type == 'SingleJet180':
-                    nOffJets_passingTrigThsh = [0] * len(TrigThshs_OffJetPt)
-                    for iJet in range(nOffJets):
-                        for iTrigThsh in range(len(TrigThshs_OffJetPt)):
-                            if Jet_br['pt'][iEvent][iJet] > TrigThshs_OffJetPt[iTrigThsh]:
-                                nOffJets_passingTrigThsh[iTrigThsh] += 1
+        #         elif trigger_type == 'SingleJet180':
+        #             nOffJets_passingTrigThsh = [0] * len(TrigThshs_OffJetPt)
+        #             for iJet in range(nOffJets):
+        #                 for iTrigThsh in range(len(TrigThshs_OffJetPt)):
+        #                     if Jet_br['pt'][iEvent][iJet] > TrigThshs_OffJetPt[iTrigThsh]:
+        #                         nOffJets_passingTrigThsh[iTrigThsh] += 1
 
-                    if not all(x > 0 for x in nOffJets_passingTrigThsh):  
-                        passingTrigThshs = False
+        #             if not all(x > 0 for x in nOffJets_passingTrigThsh):  
+        #                 passingTrigThshs = False
 
-                else:
-                    print(f"HLT_Triggers_Required: {trigger_type} not implemented")
-                    passingTrigThshs = False
+        #         else:
+        #             print(f"HLT_Triggers_Required: {trigger_type} not implemented")
+        #             passingTrigThshs = False
 
-            if not passingTrigThshs:  # If one trigger fails, exit early
-                break
+        #     if not passingTrigThshs:  # If one trigger fails, exit early
+        #         break
 
-            hStat.Fill(3)
+        #     hStat.Fill(3)
         
         # -----------------------------------------------------------------------------------------------------------------------------
 
@@ -2941,7 +2941,7 @@ def run():
 
             ## End loop: for jEvt in range(chains['Unp'][iEvent].GetEntries()):
 
-        print("\n\n iEvent {}: {} ".format(0, nTotalEvents_byChains[0]))
+        print("\n\n iEvent: {} ".format( nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
 
