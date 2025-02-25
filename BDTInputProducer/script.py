@@ -2300,7 +2300,7 @@ def run():
                 hRefJet_phi_2p03.Fill(vOff.Phi())
 
                 if src in ['emu']:
-                    jetIEta_tmp    = l1jet_br['towerIEta'][iEvent][l1jet_idx]
+                    jetIEta_tmp    = convert_jetIEta_to_jetTowerIEta(l1jet_br['hwEta'][iEvent][l1jet_idx])
                     jetHwPt_tmp    = (l1jet_br['rawEt'][iEvent][l1jet_idx] - l1jet_br['puEt'][iEvent][l1jet_idx])
                     jetPt_tmp      = jetHwPt_tmp * 0.5 # 0.5 factor to conver hardware pT to GeV unit
                     jetIEtaBin_tmp = hJEC_iEta_vs_Pt.GetXaxis().FindBin( abs(jetIEta_tmp) )
