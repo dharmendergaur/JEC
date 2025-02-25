@@ -457,14 +457,14 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="root://cms-xrd-global.cern.ch//store/group/dpg_trigger/comm_trigger/L1Trigger/lroberts/JECs2025/JETMET24I/miniaod/baseline/JetMET0/jetMET24I/250221_110431/0000/nano_106.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../sample_root_files/Nano.root.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
-    parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='QCD')
+    parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='JETMET')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
     parser.add_argument('--PUrangeTag',            type=str, dest='PUrangeTag', help="PU range tag", default='None')
     parser.add_argument('--N_parts',               type=int, dest='N_parts', help="Split i/p l1nanos into N_parts", default='1')
     parser.add_argument('--M_quantilesIpFilesSet', type=int, dest='M_quantilesIpFilesSet', help="Quantile of i/p l1nanos split", default='0')
-    parser.add_argument('--outputname',              type=str, dest='output', required=False, help="output name", default="nano_136")
+    parser.add_argument('--outputname',              type=str, dest='output', required=False, help="output name", default="Nano_out")
 
     parseGroup1 = parser.add_mutually_exclusive_group(required=False)
     parseGroup1.add_argument('--l1MatchOffline', action='store_true',default= True)
