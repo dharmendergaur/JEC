@@ -403,9 +403,9 @@ class BranchCollection(dict):
 
 # Read ROOT file
 def read_root_file(file_path):
-    with uproot.open(file_path) as file:
-        tree = file["Events"]  # Load Events tree
-        return tree
+    file = uproot.open(file_path)  # Open without 'with' to keep it open
+    tree = file["Events"]  # Load Events tree
+    return tree
 
 # Extract branches efficiently
 def extract_branches(tree):
