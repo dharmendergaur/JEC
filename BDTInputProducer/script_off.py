@@ -432,6 +432,8 @@ def extract_branches(tree):
             branch_dict["eTP_E"][name] = tree[name].array()
         elif name.startswith("Jet_") or name == "nJet":
             branch_dict["jet"][name] = tree[name].array()
+        elif name.startswith("GenJet_") or name == "nGenJet":
+            branch_dict["Genjet"][name] = tree[name].array()
         elif name.startswith("L1EmulJet_") or name == "nL1EmulJet":
             branch_dict["emu"][name] = tree[name].array()
         elif name.startswith("L1Jet_") or name == "nL1Jet":
@@ -457,7 +459,7 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../sample_root_files/Nano.root.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../sample_root_files/nano_MC.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='JETMET')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
@@ -512,6 +514,7 @@ def run():
     eTP_H_br = BranchCollection(branch_data["eTP_H"], "HcalEmulTPs_", "nHcalEmulTPs")
     eTP_E_br = BranchCollection(branch_data["eTP_E"], "EcalEmulTPs_", "nEcalEmulTPs")
     Jet_br = BranchCollection(branch_data["jet"], "Jet_", "nJet")
+    GenJet_br = BranchCollection(branch_data["Genjet"], "GenJet_", "nGenJet")
     Emu_br = BranchCollection(branch_data["emu"], "L1EmulJet_", "nL1EmulJet")
     Unp_br = BranchCollection(branch_data["unp"], "L1Jet_", "nL1Jet")
     Vtx_br = BranchCollection(branch_data["vtx"], "PV_", "PV_npvsGood")
@@ -548,7 +551,7 @@ def run():
             
 
     usePUReweighting = False
-    isMC = False
+    isMC = True
     for in_file in in_file_names:
         if "mc" in in_file.lower():
             isMC = True
@@ -597,25 +600,25 @@ def run():
     # GoldenJSON -----------------------------------------------------------------------------
     goldenJSON = None
     #if type(GoldenJSONForData_list)
-    if isinstance(GoldenJSONForData_list, list) and len(GoldenJSONForData_list) > 0 and (not isMC):
-        for GoldenJSONForData_ in GoldenJSONForData_list:
-            #with open(GoldenJSONForData_) as fGoldenJSON_:
-            #    goldenJSON_tmp = json.load(fGoldenJSON_)
+    # if isinstance(GoldenJSONForData_list, list) and len(GoldenJSONForData_list) > 0 and (not isMC):
+    #     for GoldenJSONForData_ in GoldenJSONForData_list:
+    #         #with open(GoldenJSONForData_) as fGoldenJSON_:
+    #         #    goldenJSON_tmp = json.load(fGoldenJSON_)
 
-            fGoldenJSON_ = None
-            if GoldenJSONForData_.startswith('https://'):
-                fGoldenJSON_ = urllib.request.urlopen(GoldenJSONForData_)
-            else:
-                fGoldenJSON_ = open(GoldenJSONForData_)
+    #         fGoldenJSON_ = None
+    #         if GoldenJSONForData_.startswith('https://'):
+    #             fGoldenJSON_ = urllib.request.urlopen(GoldenJSONForData_)
+    #         else:
+    #             fGoldenJSON_ = open(GoldenJSONForData_)
 
-            goldenJSON_tmp = json.load(fGoldenJSON_)
-            if not goldenJSON: goldenJSON = goldenJSON_tmp
-            else: goldenJSON |= goldenJSON_tmp # append dict
-            fGoldenJSON_.close()
+    #         goldenJSON_tmp = json.load(fGoldenJSON_)
+    #         if not goldenJSON: goldenJSON = goldenJSON_tmp
+    #         else: goldenJSON |= goldenJSON_tmp # append dict
+    #         fGoldenJSON_.close()
 
-        print(f"GoldenJSONForData_list: {GoldenJSONForData_list}")
-        if PrintLevel >= 0:
-            print(f"goldenJSON: {goldenJSON}")
+    #     print(f"GoldenJSONForData_list: {GoldenJSONForData_list}")
+    #     if PrintLevel >= 0:
+    #         print(f"goldenJSON: {goldenJSON}")
 
     ###################
     ### Book histograms
@@ -623,7 +626,7 @@ def run():
     if PrintLevel >= 1:
         print("Booking hitograms")
     hDummy = R.TH1D("hDummy","",1,0,1)
-    hDummy.SetDefaultSumw2()
+    # hDummy.SetDefaultSumw2()
 
     pt_bins  = [20,    0, 200]
     ptHigh_bins  = [200,    0, 1000]
@@ -1210,7 +1213,7 @@ def run():
 
 
     if PrintLevel >= 1: 
-        print("Hitograms booked"); sys.stdout.flush();
+        print("Histograms booked"); sys.stdout.flush();
 
     # nVtx
     hnVtx       = R.TH1D("nVtx",       "nVtx",       201,-0.5,200.5);
@@ -1473,37 +1476,48 @@ def run():
     print(list(Jet_br.keys()))
 
     l1MatchGen= False
+    l1MatchOffline=True
     nTotalEvents_byChains=[]
     nTotalEvents_byChains.append(0)
-    for iEvent in range(100):
+    for iEvent in range(Ntot):
 
         l1JetRef_br = None
         nRefJets    = 0
         et_RefJets  = None
         eta_RefJets = None
         phi_RefJets = None
-        NJets= Jet_br['nObjects'][iEvent]
-        nOffJets= Jet_br['nObjects'][iEvent]
-        et_RefJets=Jet_br["pt"][iEvent]
-        eta_RefJets=Jet_br["eta"][iEvent]
-        phi_RefJets=Jet_br["phi"][iEvent]
+        if l1MatchOffline:
+            nRefJets= Jet_br['nObjects'][iEvent]
+            nOffJets= Jet_br['nObjects'][iEvent]
+            et_RefJets=Jet_br["pt"][iEvent]
+            # print(et_RefJets)
+            eta_RefJets=Jet_br["eta"][iEvent]
+            phi_RefJets=Jet_br["phi"][iEvent]
 
-        # print("Event: %d, NJets: %d" % (iEvent, NJets))
+        elif l1MatchGen:
+            nRefJets= GenJet_br['nObjects'][iEvent]
+            nOffJets= GenJet_br['nObjects'][iEvent]
+            et_RefJets=GenJet_br["pt"][iEvent]
+            # print(et_RefJets)
+            eta_RefJets=GenJet_br["eta"][iEvent]
+            phi_RefJets=GenJet_br["phi"][iEvent]
+
+        # print("Event: %d, nRefJets: %d" % (iEvent, nRefJets))
 
         nTotalEvents_byChains[0] += 1
         hStat.Fill(0)
 
         #Analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28 ----
-        # if isMC and useCutGenNVtxEq0:
-        #     if Gen_br.nVtx > 0: continue
+        if isMC and useCutGenNVtxEq0:
+            if Vtx_br['nObjects'][iEvent] > 0: continue
         # ----------------------------------------------------------------------------------------------------------
             
 
     
-        if not isMC and len(GoldenJSONForData_list) > 0:
-            if not passGoldenJSON(goldenJSON, int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent])):
-                # print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run']), int(Evt_br['luminosityBlock']), int(Evt_br['event']))); sys.stdout.flush();
-                continue
+        # if not isMC and len(GoldenJSONForData_list) > 0:
+        #     if not passGoldenJSON(goldenJSON, int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent])):
+        #         # print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run']), int(Evt_br['luminosityBlock']), int(Evt_br['event']))); sys.stdout.flush();
+        #         continue
 
 
         dataEra = ''
@@ -1512,8 +1526,6 @@ def run():
                 if int(Evt_br['run'][iEvent]) >= eraRunRange_[0] and int(Evt_br['run'][iEvent]) <= eraRunRange_[1]:
                     dataEra = Era_
                     break
-        
-        # print("dataEra: %s" % (dataEra))
 
         hStat.Fill(1)
         # print(list(HLT_br.keys()))
@@ -1543,6 +1555,8 @@ def run():
             if sRunLSEvent not in eventsToRun_list: continue
             print("Ruuning on selected event %s" % (sRunLSEvent))
 
+        # print("Hi")
+
         puWeight = 1.0
         nVtx = Vtx_br['nObjects'][iEvent]
 
@@ -1564,7 +1578,7 @@ def run():
         nUnpTTs   = int(uTT_br['nObjects'][iEvent])
         # nEmuTCs   = int(eTC_br.nCluster[iEvent])
         # nGenJets  = int(Gen_br.nJet[iEvent])
-        l1MatchOffline= True
+
         offlinePUPPIJet = False
 
         if   l1MatchOffline:
@@ -1576,16 +1590,16 @@ def run():
                 phi_RefJets  = Jet_br.puppi_phi
                 #print(f"PUPPI jets")
             else:
-                # PF CHS jets
                 nRefJets     = Jet_br['nObjects'][iEvent]
                 et_RefJets   = Jet_br['pt'][iEvent]
                 eta_RefJets  = Jet_br['eta'][iEvent]
                 phi_RefJets  = Jet_br['phi'][iEvent]                    
         elif l1MatchGen:
-            nRefJets     = Gen_br.nJet[iEvent]
-            et_RefJets   = Gen_br.jetPt[iEvent]
-            eta_RefJets  = Gen_br.jetEta[iEvent]
-            phi_RefJets  = Gen_br.jetPhi[iEvent]
+            print("USing Gen")
+            nRefJets     = GenJet_br['nObjects'][iEvent]
+            et_RefJets   = GenJet_br['pt'][iEvent]
+            eta_RefJets  = GenJet_br['eta'][iEvent]
+            phi_RefJets  = GenJet_br['phi'][iEvent]      
 
         hnVts_vs_nTT_unp.Fill(nVtx, nUnpTTs)
         hnVts_vs_nTT_emu.Fill(nVtx, nEmuTTs)
@@ -1702,7 +1716,7 @@ def run():
                     break
 
         isFirstRefJet = True
-        for iOff in range(NJets):
+        for iOff in range(nRefJets):
 
             hStat.Fill(4)
             hRefJet_pt_0.Fill(et_RefJets[iOff])
@@ -1762,7 +1776,7 @@ def run():
                     ]
                     # print(reject_if)
 
-                if any(reject_if):
+                if reject_if and any(reject_if):  # Ensure reject_if is not None
                     selectPFJet = False
 
                 if not selectPFJet: continue
@@ -2022,11 +2036,11 @@ def run():
             data_dict['nTT_Emulated']             = nEmuTTs
             if   l1MatchOffline:
                 data_dict['PFJetEtCorr']          = vOff.Pt()
-            # elif l1MatchGen:
-            #     data_dict['GenJetEt']             = vOff.Pt()
-            #     data_dict['nVertexGen']           = int(Gen_br.nVtx)
-            #     data_dict['nMeanPUGen']           = int(Gen_br.nMeanPU)
-            #     data_dict['matchedPFJetEtCorr']   = off_vec_matc
+            elif l1MatchGen:
+                data_dict['GenJetEt']             = vOff.Pt()
+                data_dict['nVertexGen']           = int(nVtx)
+                # data_dict['nMeanPUGen']           = int(Gen_br.nMeanPU)
+                data_dict['matchedPFJetEtCorr']   = off_vec_matchedTo_gen_vec.Pt()
         
             if runMode not in ['CalCalibSF', 'makeInputForML'] and vOff.Pt() < PT_MIN: continue
         
@@ -2057,6 +2071,7 @@ def run():
         
             hStat.Fill(11)
 
+            ## Find highest-pT Level-1 jet with good dR matching to unpacked jet
             max_pt = {}
             vMax   = {}
             matchedEmuIdx = {}
@@ -2209,6 +2224,7 @@ def run():
             if not JetClustByHand:
                 continue
 
+            # run jet clustring by hand ---------------------------------------------
             if VERBOSE or PrintLevel >= 1:
                 sTmp = "matchedEmuIdx: "
                 for src in ['unp','emu']:
@@ -2216,6 +2232,9 @@ def run():
                         sTmp += "  %s_%s %d" % (src,algo,matchedEmuIdx[src][algo])
                 print("        {}".format(sTmp))
 
+            # check clusters/TTs of the emulated/unpacked jet that matched to the offline jet
+            # emulated jet index: l1jet_idx = matchedEmuIdx[src]['PUS']
+            #for src in ['unp', 'emu']: # ['unp','emu'] # 'unp' doesn't work as jetTOwerIEta=0 variables are stored in unpacked branch
             for src in ['emu']:
                 l1jet_br = None
                 l1TC_br  = None
@@ -2230,7 +2249,7 @@ def run():
 
                 # use l1 jet, leading in pT with algo='PUS' that matches to offline jet, 
                 # as a reference (for jetToweriEta, jetTowerIPhi) to form cluster around (jetToweriEta, jetTowerIPhi).   
-                l1jet_idx = matchedEmuIdx['emu']['PUS']
+                l1jet_idx = matchedEmuIdx[src]['PUS']
                 if l1jet_idx < 0: # no dR matching between emulated/unpacked jet and offline jet is found
                     res_dummy          = -1.49  # (l1jet_pt - vOff.Pt()) / vOff.Pt()
                     #jetIEta_offlineJet = calculateJetIEta(vOff.Eta())  # -50. # None # abs(vOff.Eta())
@@ -2944,7 +2963,7 @@ def run():
         print("\n\n iEvent: {} ".format( nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
-    print(f"Total Events: {nTot}")
+    # print(f"Total Events: {NTot}")
     print('\nFinished loop over Events')
     print(f"Processing completed in {time.time() - start_time:.2f} seconds")
     if runMode in ['makeInputForML']: 
