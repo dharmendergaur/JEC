@@ -2280,20 +2280,20 @@ def run():
                 # Unpacked L1T jets in L1TNuples have jetEt information stored and not rawEt,  puEt etc, hence they can not be used for JEC derivation.
                 # So for JEC derivation, use L1T emulated jets with the same jetEt, jetEta and jetPhi as of the unpacked L1T jet
                 # Don't apply it when emulating with diffent layer 1 SF as that was used during data taking
-                for iUnp in range(nUnpJets):
-                    if Unp_br['bx'][iEvent][iUnp] != 0: continue  ## Use only jets in BX 0
+                    for iUnp in range(nUnpJets):
+                        if Unp_br['bx'][iEvent][iUnp] != 0: continue  ## Use only jets in BX 0
 
-                    # Unp_br.jetEt[iUnp], Unp_br.jetEta[iUnp], Unp_br.jetPhi[iUnp]
-                    # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
-                    # l1jet_idx
-                    # l1jet_br
-                    if  ( (abs(Unp_br['pt'][iEvent][iUnp]  - l1jet_br['pt'][iEvent][l1jet_idx])  < 1e-8) and \
-                            (abs(Unp_br['eta'][iEvent][iUnp] - l1jet_br['eta'][iEvent][l1jet_idx]) < 1e-8) and \
-                            (abs(Unp_br['phi'][iEvent][iUnp] - l1jet_br['phi'][iEvent][l1jet_idx]) < 1e-8) ):
-                        isMatchToUnp = True
-                        break
+                        # Unp_br.jetEt[iUnp], Unp_br.jetEta[iUnp], Unp_br.jetPhi[iUnp]
+                        # Emu_br.jetEt[iEmu], Emu_br.jetEta[iEmu], Emu_br.jetPhi[iEmu]
+                        # l1jet_idx
+                        # l1jet_br
+                        if  ( (abs(Unp_br['pt'][iEvent][iUnp]  - l1jet_br['pt'][iEvent][l1jet_idx])  < 1e-8) and \
+                                (abs(Unp_br['eta'][iEvent][iUnp] - l1jet_br['eta'][iEvent][l1jet_idx]) < 1e-8) and \
+                                (abs(Unp_br['phi'][iEvent][iUnp] - l1jet_br['phi'][iEvent][l1jet_idx]) < 1e-8) ):
+                            isMatchToUnp = True
+                            break
 
-                if not isMatchToUnp and MatchEmulatedJetsWithUnpacked : continue
+                    if not isMatchToUnp and MatchEmulatedJetsWithUnpacked : continue
 
                 hRefJet_pt_2p03.Fill(vOff.Pt())
                 hRefJet_eta_2p03.Fill(vOff.Eta())
