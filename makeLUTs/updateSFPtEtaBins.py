@@ -31,7 +31,7 @@ PUSAlgosAll      = ['RawPUS_phiDefault'] # ['RawPUS', 'RawPUS_phiDefault']
 nLinesToRead = -1 # Max line to read from SF.csv file 
 
 # Read L1Jet CalibLayer2 SFs from csv files provided by Syed
-useAdditionalSFForLUT = True # 8/7 factor is needed for PhiRing as different PU estimation considered in CMSSW and Andrew's computation
+useAdditionalSFForLUT = False # 8/7 factor is needed for PhiRing as different PU estimation considered in CMSSW and Andrew's computation
 icalibSF = 0 # 0, 1
 calibSFLable = ['SF'][icalibSF]  
 sipFileCalibSF = {
@@ -47,7 +47,7 @@ sipFileCalibSF = {
            'fileName': '', #'../data/L1T_Jet_SFs_2024v0_20240209_L1JetEt_PUS_PhiRing_HBE_logGenEtByL1Et_atPU33_HF_GenEtByL1Et_atPU33.csv',
            'SFLabel': ['SF'][icalibSF],
            'L1JetPtVarName':'L1JetEt_PUS_PhiRing',
-           'additionalCorrForLUT': 8.0/7.0, # 8/7 factor is needed for PhiRing as different PU estimation considered in CMSSW and Andrew's computation
+           'additionalCorrForLUT': 1, # 8/7 factor is needed for PhiRing as different PU estimation considered in CMSSW and Andrew's computation
        },
     }, 
 
