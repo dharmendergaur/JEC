@@ -190,9 +190,8 @@ data_all = pd.read_csv(sIpFileName)
 print("Original sample: data_all.columns: {}, \ndata_all.shape: {}".format(data_all.columns, data_all.shape))
 
 # %%
-# data_all[sL1JetEt_PUS_ChunkyDonut] = data_all['L1Jet9x9_RawEt'] - data_all['L1Jet9x9_PUEt_ChunkyDonut']        #use by hand uncorrected L1 pT (PU subtracted)
+data_all[sL1JetEt_PUS_ChunkyDonut] = data_all['L1Jet9x9_RawEt'] - data_all['L1Jet9x9_PUEt_ChunkyDonut']        
 
-data_all[sL1JetEt_PUS_PhiRing] = data_all['L1JetDefault_RawEt'] - data_all['L1JetDefault_PUEt_PhiRing']
 
 #data_all[sL1JetEt_PUS_PhiRing]     = data_all['L1Jet9x9_RawEt'] - (data_all['L1Jet9x9_EtSum7PUTowers'] / 7.0 )
 data_all['PUEt_PhiRing'] = (data_all['L1Jet9x9_EtSum7PUTowers'] / 7.0 )
@@ -205,7 +204,9 @@ if UsePUCapping:
         (MaxEt7PUTT / 7.0),
         inplace = True 
     )
-data_all[sL1JetEt_PUS_PhiRing] = data_all['L1Jet9x9_RawEt'] - data_all['PUEt_PhiRing']
+# data_all[sL1JetEt_PUS_PhiRing] = data_all['L1Jet9x9_RawEt'] - data_all['PUEt_PhiRing']
+
+data_all[sL1JetEt_PUS_PhiRing] = data_all['L1JetDefault_RawEt'] - data_all['L1JetDefault_PUEt_PhiRing']
 
 # %%
 # Check PU vs iEta
@@ -805,11 +806,11 @@ def train_MLModel_wHyperopt(X, y):
             eval_set=[(X_valid, y_valid)],
             verbose=False       
         )
-        score = mean_squared_error(y_valid, model.predict(X_valid), squared=False)
+        score = np.sqrt(mean_squared_error(y_valid, model.predict(X_valid)))
         if printLevel >= 3:
             print("score: valid {}, train {}. params: {}".format(
                 score,
-                mean_squared_error(y_train, model.predict(X_train), squared=False),
+                np.sqrt(mean_squared_error(y_train, model.predict(X_train))),
                 params))
         return {'loss': score, 'status': STATUS_OK, 'ML_model': model}
             
