@@ -26,15 +26,15 @@ Input parameters read by default:
 ## Step 3: BDT trainning
 
 1.  Calibration JEC SF computation script is `setup/calculate_L1JetSFs_usingBD.ipynb`.
-2.  Run for 4 different setups:
+2.  Run for 4 different setups using the correct --ipFile flag:
 
-        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget GenEt
+        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget GenEt --ipFile _csv_file_
 
-        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget logGenEt
+        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget logGenEt --ipFile _csv_file_
 
-        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget GenEtByL1Et
+        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget GenEtByL1Et --ipFile _csv_file_
 
-        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget logGenEtByL1Et
+        python3 calculate_L1JetSFs_usingBDT.py --PhiRing     --l1MatchGen --MLTarget logGenEtByL1Et --ipFile _csv_file_
 
     Modify `--fracOfDataToUse` accordingly.
 
