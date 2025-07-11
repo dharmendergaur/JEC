@@ -1475,7 +1475,7 @@ def run():
     l1MatchGen= False
     nTotalEvents_byChains=[]
     nTotalEvents_byChains.append(0)
-    for iEvent in range(100):
+    for iEvent in range(Ntot):
 
         l1JetRef_br = None
         nRefJets    = 0
@@ -2944,7 +2944,7 @@ def run():
         print("\n\n iEvent: {} ".format( nTotalEvents_byChains[0]))
         hnTotalEvents.SetBinContent(1, nTotalEvents_byChains[0])
         # ## End loop: for iEvent in range(len(chains['Unp'])):
-    print(f"Total Events: {nTot}")
+    print(f"Total Events: {Ntot}")
     print('\nFinished loop over Events')
     print(f"Processing completed in {time.time() - start_time:.2f} seconds")
     if runMode in ['makeInputForML']: 
