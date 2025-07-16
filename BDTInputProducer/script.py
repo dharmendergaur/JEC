@@ -41,7 +41,8 @@ TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24],
 TrigThshs_OffJetPt = [ 180 ] # For e.g. for SingleJet180: [ 180 ], for DiJet180: [180, 180], for Jet180_Jet120: [180, 120]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
-GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
+# GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
+GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_393446_Golden.json"]
 useCutGenNVtxEq0 = False # Set False. Only for troubleshoot perfose. When set True: analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28
 #offlineJetType = 'PUPPI' # 'CHS', 'PUPPI'  offlineCHSJet, offlinePUPPIJet. Set it as a command line argument 
 nJetFilters = 14
@@ -77,6 +78,7 @@ dataErasRunRange = {
     # '2024G': [380949, 389999],
     # '2024H': [380949, 389999],
     '2024I': [386753, 389999],
+    '2025' : [390000, 1000000], # 2025 Run3 data
     
 }
 
@@ -457,7 +459,7 @@ def run():
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../sample_root_files/Nano.root")
+    parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=False, help="L1T nanos", default="../sample_root_files/Nano.root.root")
     # parser.add_argument('--l1nano',              type=str, dest='l1nanoPath', required=True, help="L1T nanos")
     parser.add_argument('--sampleName',            type=str, dest='sampleName'  , help="sampleName for o/p file name", default='JETMET')
     parser.add_argument('--HcalPUS',               type=str, dest='OOT_PU_scheme', help="HCAL OOT PUS scheme", default='PFA1p')
@@ -496,7 +498,7 @@ def run():
     print("Inputs: \n\t file_name/l1nanoPath: {}, \n\t sampleName: {}, \n\t  OOT_PU_scheme: {}, \n\t PUrangeTag: {}, \n\t N_parts: {}, \n\t M_quantilesIpFilesSet: {}, \n\t l1MatchOffline: {}, \n\t l1MatchGen: {}, \n\t l1nanoChunkyDonut: {}, \n\t l1nanoPhiRing: {})".format(
         file_name, sampleName, OOT_PU_scheme, PUrangeTag, N_parts, M_quantilesIpFilesSet, l1MatchOffline, l1MatchGen, l1nanoChunkyDonut, l1nanoPhiRing
     ))
-    print(f"offlineCHSJet: {offlineCHSJet},  offlinePUPPIJet: {offlinePUPPIJet} ")
+    # print(f"offlineCHSJet: {offlineCHSJet},  offlinePUPPIJet: {offlinePUPPIJet} ")
 
     tree = read_root_file(file_name)
     branch_data = extract_branches(tree)
@@ -614,8 +616,8 @@ def run():
             fGoldenJSON_.close()
 
         print(f"GoldenJSONForData_list: {GoldenJSONForData_list}")
-        if PrintLevel >= 0:
-            print(f"goldenJSON: {goldenJSON}")
+        # if PrintLevel >= 0:
+            # print(f"goldenJSON: {goldenJSON}")
 
     ###################
     ### Book histograms
@@ -1470,7 +1472,6 @@ def run():
 
     Ntot=len(Jet_br["pt"])
     print(f"Total events: {Ntot}")  
-    print(list(Jet_br.keys()))
 
     l1MatchGen= False
     nTotalEvents_byChains=[]
@@ -1511,6 +1512,7 @@ def run():
             for Era_, eraRunRange_ in dataErasRunRange.items():
                 if int(Evt_br['run'][iEvent]) >= eraRunRange_[0] and int(Evt_br['run'][iEvent]) <= eraRunRange_[1]:
                     dataEra = Era_
+                    # print(f"Data era: {dataEra}")
                     break
         
         # print("dataEra: %s" % (dataEra))
@@ -1732,7 +1734,7 @@ def run():
                 if dataEra in [
                     '2022F', '2022G', 
                     '2023B', '2023C', '2023D', 
-                    '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H', '2024I' ]:
+                    '2024A', '2024B', '2024C', '2024D', '2024E', '2024F', '2024G', '2024H', '2024I', '2025']:
                     # https://twiki.cern.ch/twiki/bin/view/CMS/JetID13p6TeV#Recommendations_for_the_13_6_AN1
                     # https://github.com/bundocka/cmssw/blob/7d536e034f7dd0773eec3f306508c80c67fb1960/L1Trigger/L1Tnanos/plugins/L1JetRecoTreeProducer.cc#L689-L715
 
@@ -1763,6 +1765,10 @@ def run():
                     # print(reject_if)
 
                 if any(reject_if):
+                    print("Jet rejected due to failing criteria:")
+                    for cond in reject_if:
+                        if cond:
+                            print(f" - {cond}")
                     selectPFJet = False
 
                 if not selectPFJet: continue
