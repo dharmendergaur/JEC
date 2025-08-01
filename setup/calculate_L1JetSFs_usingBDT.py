@@ -40,7 +40,7 @@ parser.add_argument('--MLTarget',           type=str,   dest='MLTarget',  defaul
 parser.add_argument('--PUForSFComputation', type=int,   dest='PUForSFComputation', help="PU at which SFs to compute", default='33')
 parser.add_argument('--fracOfDataToUse',    type=float, dest='fracOfDataToUse', help="fraction of data to use", default='1.0')
 parser.add_argument('--version',            type=str,   dest='version',   default='versionTmp')
-parser.add_argument('--ipFile',             type=str,   dest='ipFile',    default='../baseline.csv')
+parser.add_argument('--ipFile',             type=str,   dest='ipFile',    default='../output.csv')
 parseGroup1 = parser.add_mutually_exclusive_group()
 parseGroup1.add_argument('--ChunkyDonut',    action='store_true')
 parseGroup1.add_argument('--PhiRing',        action='store_true', default=True)
@@ -109,7 +109,7 @@ sOutDir         = "./plots_%s" % (version)
 #sOpFileName_SFs = sOpFileName_SFs.replace('.csv', '_%s.csv' % (sL1JetEt))
 #sOutDir = '%s_%s' % (sOutDir, sL1JetEt)
 
-plotPerformancePlots = False
+plotPerformancePlots = True
 
 PT_CAT = OD()
 PT_CAT['Ptlt25']   = [ 0,  15,   25]  ## Low pT, turn-on threshold, high pT
@@ -198,7 +198,7 @@ data_all['PUEt_PhiRing'] = (data_all['L1Jet9x9_EtSum7PUTowers'] / 7.0 )
 if UsePUCapping:
     # PU capping: https://indico.cern.ch/event/1387215/contributions/5831385/attachments/2808676/4902041/jets.pdf#page=11
     # In |iEta| < 20, (Maximum Phi-Ring Et) = RawEt + 200 GeV  i.e. (Maximu EtSum7PUTowers) = 200 
-    data_all['PUEt_PhiRing'].where( # Where cond is True, keep the original value. Where False, replace with corresponding value from other.
+    data_all['L1JetDefault_PUEt_PhiRing'].where( # Where cond is True, keep the original value. Where False, replace with corresponding value from other.
         ((~data_all['L1JetTowerIEtaAbs'].isin(iEtaBinsForPUCapping)) | 
         ( data_all['L1Jet9x9_EtSum7PUTowers'] < MaxEt7PUTT) ),
         (MaxEt7PUTT / 7.0),
@@ -215,10 +215,10 @@ puMax_list  = []
 puCappedMean_list = []
 puCappedMax_list  = []
 for iEta in iEtaBins:
-    puMean = (data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1Jet9x9_EtSum7PUTowers'] / 7.0).mean()
-    puMax  = (data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1Jet9x9_EtSum7PUTowers'] / 7.0).max()
-    puCappedMean = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['PUEt_PhiRing'].mean()
-    puCappedMax  = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['PUEt_PhiRing'].max()
+    puMean = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1JetDefault_PUEt_PhiRing'].mean()
+    puMax  = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1JetDefault_PUEt_PhiRing'].max()
+    puCappedMean = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1JetDefault_PUEt_PhiRing'].mean()
+    puCappedMax  = data_all[data_all[sL1JetTowerIEtaAbs] == iEta]['L1JetDefault_PUEt_PhiRing'].max()
     puMean_list.append( puMean )
     puMax_list.append(  puMax  )
     puCappedMean_list.append( puCappedMean )
@@ -237,10 +237,10 @@ axs.grid()
 #fig.show()
 
 # %%
-data_all.loc[data_all['PUEt_PhiRing'].argmax()]
+data_all.loc[data_all['L1JetDefault_PUEt_PhiRing'].argmax()]
 
 # %%
-#data_all.loc[data_all['PUEt_PhiRing'].argmax()]['L1JetTowerIEtaAbs'].isin(iEtaBinsForPUCapping)
+#data_all.loc[data_all['L1JetDefault_PUEt_PhiRing'].argmax()]['L1JetTowerIEtaAbs'].isin(iEtaBinsForPUCapping)
 data_all[~data_all['L1JetTowerIEtaAbs'].isin(iEtaBinsForPUCapping)].describe()
 
 # %%
@@ -274,7 +274,7 @@ if plotPerformancePlots:
         axs.set_title('iEta %d' % (iEtaBin))
         axs.legend()
 
-        fig.savefig('%s/L1JetEt_ieta_%d.png' % (sOutDir1D_toUse, iEtaBin))
+        fig.savefig('%s/L1JetEt_ieta_%d.pdf' % (sOutDir1D_toUse, iEtaBin))
         plt.close(fig) 
 
 # %%
@@ -331,7 +331,7 @@ if plotPerformancePlots:
         axs.set_title('iEta %d' % (iEtaBin))
         axs.legend()
 
-        fig.savefig('%s/L1JetEt_ieta_%d_afterDataCleaning.png' % (sOutDir1D_toUse, iEtaBin))
+        fig.savefig('%s/L1JetEt_ieta_%d_afterDataCleaning.pdf' % (sOutDir1D_toUse, iEtaBin))
         plt.close(fig)
 
 # %%
@@ -432,7 +432,7 @@ if plotPerformancePlots:
         axs.set_title('%s' % (sL1JetEt))
         axs.legend()
 
-        fig.savefig('%s/L1JetResponse_beforeJEC_%s_ieta_%d_to_%d.png' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
+        fig.savefig('%s/L1JetResponse_beforeJEC_%s_ieta_%d_to_%d.pdf' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
         plt.close(fig)    
 
 
@@ -470,7 +470,7 @@ if plotPerformancePlots:
         axs.set_title('%s in %d <= iEta <= %d' % (sL1JetEt, iEtaBin_first, iEtaBin_last))
         axs.legend()
 
-        fig.savefig('%s/L1JetResponse_beforeJEC_%s_ieta_%d_to_%d_inPtCat_%s.png' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1]), pt_cat))
+        fig.savefig('%s/L1JetResponse_beforeJEC_%s_ieta_%d_to_%d_inPtCat_%s.pdf' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1]), pt_cat))
         plt.close(fig)    
 
 
@@ -557,7 +557,7 @@ if plotPerformancePlots:
                 JES[iEtaBin] = {'value': Mean_,          'error': errMean_}
                 JER[iEtaBin] = {'value': Sigma_ / Mean_, 'error': errJER_}
 
-                fig.savefig('%s/L1JetResponse_1D_%s_%s_ieta_%d.png' % (sOutDir1D_toUse, PU_category, Pt_category, iEtaBin))
+                fig.savefig('%s/L1JetResponse_1D_%s_%s_ieta_%d.pdf' % (sOutDir1D_toUse, PU_category, Pt_category, iEtaBin))
                 plt.close(fig)
 
 
@@ -577,7 +577,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Mean.png' % (sOutDir_toUse, PU_category, Pt_category))
+            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Mean.pdf' % (sOutDir_toUse, PU_category, Pt_category))
             plt.close(fig)
 
 
@@ -594,7 +594,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Resolution.png' % (sOutDir_toUse, PU_category, Pt_category))     
+            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Resolution.pdf' % (sOutDir_toUse, PU_category, Pt_category))     
             plt.close(fig)
         
 
@@ -691,7 +691,7 @@ if plotPerformancePlots:
                 JES[PtMean] = {'value': Mean_,          'error': errMean_}
                 JER[PtMean] = {'value': Sigma_ / Mean_, 'error': errJER_}
 
-                fig.savefig('%s/L1JetResponse_1D_%s_ieta_%d_Pt_%.1f.png' % (sOutDir1D_toUse, PU_category, iEtaBin, PtMean))
+                fig.savefig('%s/L1JetResponse_1D_%s_ieta_%d_Pt_%.1f.pdf' % (sOutDir1D_toUse, PU_category, iEtaBin, PtMean))
                 plt.close(fig)
 
 
@@ -707,7 +707,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Mean.png' % (sOutDir_toUse, PU_category, iEtaBin))  
+            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Mean.pdf' % (sOutDir_toUse, PU_category, iEtaBin))  
             plt.close(fig)
 
             # plot JER vs iEta
@@ -721,7 +721,7 @@ if plotPerformancePlots:
             axs.set_title('%s iEta %d' % (PU_category, iEtaBin))
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
-            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Resolution.png' % (sOutDir_toUse, PU_category, iEtaBin))
+            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Resolution.pdf' % (sOutDir_toUse, PU_category, iEtaBin))
             plt.close(fig)       
 
 # %%
@@ -737,12 +737,28 @@ axs.set_xlabel('iEta bins')
 axs.set_ylabel('Entries')
 axs.set_title('%s' % (sL1JetEt))
 #axs.legend()
-fig.savefig('%s/%s_nEntriesPerIEtaBin.png' % (sOutDir, sL1JetEt))
+fig.savefig('%s/%s_nEntriesPerIEtaBin.pdf' % (sOutDir, sL1JetEt))
 if printLevel >= 11:
     print("nEntriesPerIEtaBin: {}".format(nEntriesPerIEtaBin))
     print("nEntriesPerIEtaBin_1: {}".format(nEntriesPerIEtaBin_1))
     
+# %%
+# nEntries per 5GeV pT bin 
+pt_bin_edges = np.arange(0, L1JetPtMax+5, 5)  # 5 GeV bins
 
+# Bin and count
+data_all['pt_bin'] = pd.cut(data_all[sL1JetEt], bins=pt_bin_edges, right=False)
+nEntriesPerPtBin = data_all['pt_bin'].value_counts().sort_index()
+
+# Plot
+fig, axs = plt.subplots(figsize=(6,4))
+bin_centers = pt_bin_edges[:-1] + np.diff(pt_bin_edges)/2
+axs.plot(bin_centers, nEntriesPerPtBin.values, drawstyle='steps-mid')
+axs.set_xlabel('pT [GeV]')
+axs.set_ylabel('Entries')
+axs.set_title('Entries per pT bin')
+fig.tight_layout()
+fig.savefig('%s/%s_nEntriesPerPtBin.pdf' % (sOutDir, sL1JetEt))
 
 # %%
 #%%time
@@ -847,6 +863,8 @@ def train_MLModel_wHyperopt(X, y):
     
 BDTModel_dict = OD([])
 data_SFs = None
+all_bins_list = []
+
 for iEta_category, iEtaBinRange in IEta_Cat_forML.items():
     iEtaBins_i = range(iEtaBinRange[0], iEtaBinRange[-1]+1)
 
@@ -868,6 +886,9 @@ for iEta_category, iEtaBinRange in IEta_Cat_forML.items():
 
         X = data_all_iEtaBins[train_vars] 
         y = data_all_iEtaBins[target_var]
+        # sBDTModel_fileName = '../data/BDTModel_%s_%s_%s.pkl' % (version, iEta_category, Pt_category)
+        # xgb_rg = pickle.load(open(sBDTModel_fileName, "rb"))
+        # BDTModel_dict[iEta_category][Pt_category] = xgb_rg
 
         xgb_rg = train_MLModel_wHyperopt(X, y)
 
@@ -892,17 +913,22 @@ for iEta_category, iEtaBinRange in IEta_Cat_forML.items():
                 iEta_category, iEtaBinRange, Pt_category, PtRange, data_all_iEtaBins.describe()))
             print(f"\n{data_all_iEtaBins = }")
             
+        all_bins_list.append(data_all_iEtaBins)
+            
             
             
             
         # save BDT model version
-        #sTrain_vars_ = '_'.join()
-        #sBDTModel_fileName = '../data/BDTModel_%s_vs_%s__%s_%s.pkl' % ('_'.join(train_vars), target_var, iEta_category, Pt_category)
+        # sTrain_vars_ = '_'.join()
+        # sBDTModel_fileName = '../data/BDTModel_%s_vs_%s__%s_%s.pkl' % ('_'.join(train_vars), target_var, iEta_category, Pt_category)
         sBDTModel_fileName = '../data/BDTModel_%s_%s_%s.pkl' % (version, iEta_category, Pt_category)
         pickle.dump(BDTModel_dict[iEta_category][Pt_category], open(sBDTModel_fileName, "wb"))   
         print(f"\n\nWrote BDT model to {sBDTModel_fileName = }"); sys.stdout.flush()
 
-
+all_bins_df = pd.concat(all_bins_list, axis=0)
+csv_name="compare_L1_Gen_Predict_MLTarget_%s.csv" % (MLTarget)
+all_bins_df.to_csv(csv_name, index=False)
+print(f"\n\nWrote CSV debug file to {csv_name}"); sys.stdout.flush()
 # %%
 def prepareDataframeForSFs(iEtaBinRange, PtRangeMin=L1JetPtThrsh, PtRangeMax=L1JetPtMax, nVtx=48):
     dict_iEta_Et = OD([ (sL1JetTowerIEtaAbs, []), (sL1JetEt, []) ])
@@ -1046,7 +1072,7 @@ if plotPerformancePlots:
         axs.legend()
 
 
-        fig.savefig('%s/SF_vs_Et_%s_ieta_%d_to_%d.png' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
+        fig.savefig('%s/SF_vs_Et_%s_ieta_%d_to_%d.pdf' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
         plt.close(fig)
 
 # %%
@@ -1075,9 +1101,10 @@ if plotPerformancePlots:
         axs.set_xlabel('L1JetEt / %s' % (sRefJetEt))
         axs.set_ylabel('Normalized entries')
         axs.set_title('%s: after JEC' % (sL1JetEt))
+        axs.axvline(1, color='red', linestyle='--', linewidth=1, label='Unity')
         axs.legend()
 
-        fig.savefig('%s/AfterJEC_%s_ieta_%d_to_%d.png' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
+        fig.savefig('%s/AfterJEC_%s_ieta_%d_to_%d.pdf' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))
         plt.close(fig)
 
 # %%
@@ -1111,9 +1138,10 @@ if plotPerformancePlots:
         axs.set_xlabel('L1JetEt / %s' % (sRefJetEt))
         axs.set_ylabel('Normalized entries')
         axs.set_title('%s in %d <= iEta <= %d' % (sL1JetEt, iEtaBin_first, iEtaBin_last))
+        axs.axvline(1, color='red', linestyle='--', linewidth=1, label='Unity')
         axs.legend()
 
-        fig.savefig('%s/AfterJEC_%s_ieta_%d_to_%d_inPtCat.png' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))   
+        fig.savefig('%s/AfterJEC_%s_ieta_%d_to_%d_inPtCat.pdf' % (sOutDir1D_toUse, sL1JetEt, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])))   
         plt.close(fig)
 
 # %%
@@ -1199,7 +1227,7 @@ if plotPerformancePlots:
                 JES[iEtaBin] = {'value': Mean_,          'error': errMean_}
                 JER[iEtaBin] = {'value': Sigma_ / Mean_, 'error': errJER_}
 
-                fig.savefig('%s/L1JetResponse_1D_%s_%s_ieta_%d.png' % (sOutDir1D_toUse, PU_category, Pt_category, iEtaBin))
+                fig.savefig('%s/L1JetResponse_1D_%s_%s_ieta_%d.pdf' % (sOutDir1D_toUse, PU_category, Pt_category, iEtaBin))
                 plt.close(fig)
 
 
@@ -1227,7 +1255,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Mean.png' % (sOutDir_toUse, PU_category, Pt_category))
+            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Mean.pdf' % (sOutDir_toUse, PU_category, Pt_category))
             plt.close(fig)
 
 
@@ -1251,7 +1279,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Resolution.png' % (sOutDir_toUse, PU_category, Pt_category)) 
+            fig.savefig('%s/L1JetResponse_vs_iEta_%s_%s_Resolution.pdf' % (sOutDir_toUse, PU_category, Pt_category)) 
             plt.close(fig)
 
 # %%
@@ -1336,7 +1364,7 @@ if plotPerformancePlots:
                 JES[PtMean] = {'value': Mean_,          'error': errMean_}
                 JER[PtMean] = {'value': Sigma_ / Mean_, 'error': errJER_}
 
-                fig.savefig('%s/L1JetResponse_1D_%s_ieta_%d_Pt_%.1f.png' % (sOutDir1D_toUse, PU_category, iEtaBin, PtMean))
+                fig.savefig('%s/L1JetResponse_1D_%s_ieta_%d_Pt_%.1f.pdf' % (sOutDir1D_toUse, PU_category, iEtaBin, PtMean))
                 plt.close(fig)
 
 
@@ -1359,7 +1387,7 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Mean.png' % (sOutDir_toUse, PU_category, iEtaBin))   
+            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Mean.pdf' % (sOutDir_toUse, PU_category, iEtaBin))   
             plt.close(fig)
 
             # plot JER vs iEta
@@ -1381,7 +1409,6 @@ if plotPerformancePlots:
             axs.legend(bbox_to_anchor=(0.1, 1), loc='upper left', borderaxespad=0.9)
             axs.margins(y=0.3)
             axs.grid()
-            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Resolution.png' % (sOutDir_toUse, PU_category, iEtaBin))
+            fig.savefig('%s/L1JetResponse_vs_Pt_%s_iEta_%d_Resolution.pdf' % (sOutDir_toUse, PU_category, iEtaBin))
             plt.close(fig)
-
 
