@@ -41,7 +41,8 @@ TrigThshs_OffMuPt = [ 24 ] # For e.g. for IsoMu24: [ 24 ], for DiMu24: [24, 24],
 TrigThshs_OffJetPt = [ 180 ] # For e.g. for SingleJet180: [ 180 ], for DiJet180: [180, 180], for Jet180_Jet120: [180, 120]
 
 #GoldenJSONForData_list=["Cert_Collisions2022_eraG_362433_362760_Golden.json"]
-GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]
+# GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions24/Cert_Collisions2024_378981_386951_Golden.json"]    #2024I data
+GoldenJSONForData_list= ["https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions25/Cert_Collisions2025_391658_393446_Golden.json"]    #2025C data
 useCutGenNVtxEq0 = False # Set False. Only for troubleshoot perfose. When set True: analyze (GEN.nVtx == 0) events from SinglePhoton_EpsilonPU sample to trouble-shoot high SFs in iEta 28
 #offlineJetType = 'PUPPI' # 'CHS', 'PUPPI'  offlineCHSJet, offlinePUPPIJet. Set it as a command line argument 
 nJetFilters = 14
