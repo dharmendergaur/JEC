@@ -1503,7 +1503,7 @@ def run():
     
         if not isMC and len(GoldenJSONForData_list) > 0:
             if not passGoldenJSON(goldenJSON, int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent])):
-                # print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run']), int(Evt_br['luminosityBlock']), int(Evt_br['event']))); sys.stdout.flush();
+                print(f"Run:LS:Event:  %d:%d:%d   fails GoldenJSON " %(int(Evt_br['run'][iEvent]), int(Evt_br['luminosityBlock'][iEvent]), int(Evt_br['event'][iEvent]))); sys.stdout.flush();
                 continue
 
 
