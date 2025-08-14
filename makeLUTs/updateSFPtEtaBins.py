@@ -94,10 +94,10 @@ makeLUTForIEta29 = [False, 1.0]
 makeLUTForIEta41 = [False] # SFs for iEta=41 are missing in SFv6. Copy SFs from IEta=40
 separatePtBinForLowPt = True # True: Use separate pT bin quantile for 0 < pT <= 15 GeV where SFs are truckated. NOT APPLICABLE when using firmware-fixed pT binning
 IEtaBinOffsetForEtaCompressedLUT = 0 # 0: IEtaBin_forLUT = IEtaBin = [1, 41];  -1: IEtaBin_forLUT = IEtaBin - 1 = [0, 40]. # 0 give correct calibration.
-sFOut_LUT_pt_compress        = 'lut_pt_compress_%s.txt' % (sLUTVersion)
-sFOut_LUT_eta_compress       = 'lut_eta_compress_%s.txt' % (sLUTVersion)
-sFOut_LUT_calib_compress_HEX = 'lut_calib_%s_ECALZS.txt' % (sLUTVersion)
-sFOut_LUT_calib_compress     = 'lut_calib_%s_ECALZS_decimal.txt' % (sLUTVersion)
+sFOut_LUT_pt_compress        = 'pt.txt'
+sFOut_LUT_eta_compress       = 'eta.txt'
+sFOut_LUT_calib_compress_HEX = 'calib.txt'
+sFOut_LUT_calib_compress     = 'calib_decimal.txt'
 
 makeLUTsInUncompressedBins = False # True # make LUTs without compressing Pt and Eta bins
 sFOut_LUT_pt_uncompress  = 'lut_pt_uncompress_%s.txt' % (sLUTVersion)
