@@ -1,1 +1,10 @@
 .DS_Store
+*.png
+*.pdf
+*.pkl
+*.csv
+*.root
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+*.txt

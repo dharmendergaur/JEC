@@ -1215,7 +1215,7 @@ if __name__ == '__main__':
                 #plt.xlim(10, 60)
                 
                 #plt.show()
-                plt.savefig('%s/ietaAll_SFsOriginal_2.png' % (sDir1))
+                plt.savefig('%s/ietaAll_SFsOriginal_2.pdf' % (sDir1))
             # -------------------------------------------------------------------------------------
 
 
@@ -1522,7 +1522,7 @@ if __name__ == '__main__':
                 #plt.xlim(0, 40)
                 
                 #plt.show()
-                plt.savefig('%s/SFs_ieta%dto%d.png' % (
+                plt.savefig('%s/SFs_ieta%dto%d.pdf' % (
                     sDirPlots_JECLUT, 
                     convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]),
                     convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1])
@@ -1614,7 +1614,7 @@ if __name__ == '__main__':
 
                     
                 #plt.show()
-                plt.savefig('%s/ieta%dto%d_SFsOriginal.png' % (sDir1,iEtaBinsMerge[0], iEtaBinsMerge[-1]))
+                plt.savefig('%s/ieta%dto%d_SFsOriginal.pdf' % (sDir1,iEtaBinsMerge[0], iEtaBinsMerge[-1]))
             #----------------------------------------------------------------------------------------------------------
                 
 
@@ -1660,7 +1660,7 @@ if __name__ == '__main__':
                 plt.xlim(10, 280)
                 
                 #plt.show()
-                plt.savefig('%s/SFs_pTCompressed_ieta%d.png' % (sDir1, Eta_bin))
+                plt.savefig('%s/SFs_pTCompressed_ieta%d.pdf' % (sDir1, Eta_bin))
 
 
 
@@ -1697,7 +1697,7 @@ if __name__ == '__main__':
                 plt.xlim(10, 280)
                 
                 #plt.show()
-                plt.savefig('%s/EtaPtComptessesSF_iEta%02d_to_%02d.png' % (sDir1, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1]) ))
+                plt.savefig('%s/EtaPtComptessesSF_iEta%02d_to_%02d.pdf' % (sDir1, convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[0]), convert_CaloToolMPEta_to_IEta(CaloToolMPEtaRange[-1]) ))
             #----------------------------------------------------------------------------------------------------------
  
 
@@ -1727,7 +1727,7 @@ if __name__ == '__main__':
                 plt.xlim(10, 280)
                 
                 #plt.show()
-                plt.savefig('%s/PtComptessesSF_iEta%02d_to_%02d.png' % (sDir1, iEtaBinsMerge[0], iEtaBinsMerge[-1] ))
+                plt.savefig('%s/PtComptessesSF_iEta%02d_to_%02d.pdf' % (sDir1, iEtaBinsMerge[0], iEtaBinsMerge[-1] ))
             #----------------------------------------------------------------------------------------------------------
  
 
@@ -1757,7 +1757,7 @@ if __name__ == '__main__':
                 plt.xlim(10, 280)
                 
                 #plt.show()
-                plt.savefig('%s/PtComptessesSF_v2_iEta%02d_to_%02d.png' % (sDir1, iEtaBinsMerge[0], iEtaBinsMerge[-1] ))
+                plt.savefig('%s/PtComptessesSF_v2_iEta%02d_to_%02d.pdf' % (sDir1, iEtaBinsMerge[0], iEtaBinsMerge[-1] ))
             #----------------------------------------------------------------------------------------------------------
  
                         
